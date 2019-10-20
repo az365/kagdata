@@ -11,6 +11,7 @@ TARGET = 'cnt'
 MEASURES = [TARGET]  # also can be ['cnt', 'price, 'revenue']
 TIME_FIELD = 'date_m_no'
 MIN_TIME_VALUE, MONTH_LEN, YEAR_LEN, TEST_LEN = 0, 1, 12, 1
+TIME_RANGE = [1, 2, 3, 6, 12]
 CAT_DIMENSIONS = ['shop_id', 'cat_id', 'item_id']
 ALL_DIMENSIONS = [TIME_FIELD] + CAT_DIMENSIONS
 MIN_DIMENSIONS = ['shop_id', 'item_id']  # cat_id can be derived from item_id
@@ -111,12 +112,12 @@ def prepare_lgbm_features(dataframe, train_dataframe=None):
     result = fe.add_lag_features(
         result, train_dataframe, 
         MEASURES, KEY_FIELDS, TIME_FIELD,
-        shift_range=[1, 2, 3, 6, 12], 
+        lag_range=TIME_RANGE,
     )
     result = fe.add_xox_features(
         result, result, train_dataframe, 
         TARGET, KEY_FIELDS, TIME_FIELD, 
-        shifts=[('yoy', YEAR_LEN, [1, 2, 3]), ('mom', MONTH_LEN, [1, 2, 3, 6])], 
+        lags=[('yoy', YEAR_LEN, TIME_RANGE[:3]), ('mom', MONTH_LEN, TIME_RANGE[:4])], 
         na_value=0, inf_value=99,
     )
     result = fe.add_agg_features(

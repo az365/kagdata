@@ -5,6 +5,7 @@ import pandas as pd
 
 TIME_FIELD = 'date_m_no'
 MIN_TIME_VALUE, MONTH_LEN, YEAR_LEN, TEST_LEN = 0, 1, 12, 1
+TIME_RANGE = [1, 2, 3, 6, 12]
 REPRESENTATIVE_TIME_LEN = 2 * YEAR_LEN
 TARGET = 'target'
 MEASURES = [TARGET]
@@ -113,7 +114,10 @@ def add_agg_features(
     TITLE = 'add_agg_features():'
     max_time = dataframe[time_field].max() - test_len  # exclude test dates from counters
     min_time = max_time - take_last_times + 1
-    last_time_dataframe = train_dataframe[train_dataframe[time_field] >= min_time]
+    last_time_dataframe = train_dataframe[
+        (train_dataframe[time_field] >= min_time) &
+        (train_dataframe[time_field] <= max_time)
+    ]
     result = dataframe.copy()
     for sum_by in dimension_combinations:
         if verbose:
@@ -134,25 +138,25 @@ def add_agg_features(
 def add_lag_features(
     dataframe, train_dataframe,
     fields_for_lag=MEASURES, key_fields=KEY_FIELDS, time_field=TIME_FIELD,
-    shift_range=[1, 2, 3, 6, 12], 
+    lag_range=TIME_RANGE, 
     discard_rows_witout_new_features=True,
     verbose=True,
 ):
     TITLE = 'add_lag_features():'
-    for time_shift in shift_range:
+    for time_lag in lag_range:
         if verbose:
-            print(TITLE, 'Processing shift {}...'.format(time_shift), end='\r')
+            print(TITLE, 'Processing time-lag {}...'.format(time_lag), end='\r')
         sales_shift = train_dataframe[key_fields + fields_for_lag].copy()
-        sales_shift[time_field] = sales_shift[time_field] + time_shift
-        rename_fields = lambda x: '{}_lag_{}'.format(x, time_shift) if x in fields_for_lag else x
+        sales_shift[time_field] = sales_shift[time_field] + time_lag
+        rename_fields = lambda x: '{}_lag_{}'.format(x, time_lag) if x in fields_for_lag else x
         sales_shift = sales_shift.rename(columns=rename_fields)
         dataframe = dataframe.merge(sales_shift, on=key_fields, how='left').fillna(0)
         gc.collect();
     if discard_rows_witout_new_features:  # don't use old data without shifted dates
-        dataframe = dataframe[dataframe[time_field] >= MIN_TIME_VALUE + max(shift_range)] 
+        dataframe = dataframe[dataframe[time_field] >= MIN_TIME_VALUE + max(lag_range)] 
     if verbose:
         print(TITLE, 'Done.', ' ' * 50)
-        fit_cols = [col for col in dataframe.columns if col[-1] in [str(item) for item in shift_range]] 
+        fit_cols = [col for col in dataframe.columns if col[-1] in [str(item) for item in lag_range]] 
         print(TITLE, 'fit_cols = ', fit_cols)  # list of all lagged features
         to_drop_cols = list(set(list(dataframe.columns)) - (set(fit_cols)|set(key_fields))) + [time_field] 
         print(TITLE, 'to_drop_cols = ', to_drop_cols)  # We will drop these at fitting stage
@@ -165,7 +169,7 @@ def add_xox_features(
     lag_dataframe,  # lag_dataframe must include lag-features from add_lag_features()
     train_dataframe,  # train_dataframe must include target-field (cnt, i.e.)
     measure=TARGET, dimensions=KEY_FIELDS, time_field=TIME_FIELD, 
-    shifts=[('yoy', YEAR_LEN, [1, 2, 3]), ('mom', MONTH_LEN, [1, 2, 3, 6])],  # (x_name, x_len, shift_range)
+    lags=[('yoy', YEAR_LEN, TIME_RANGE[:3]), ('mom', MONTH_LEN, TIME_RANGE[:4])],  # (x_name, x_len, lag_range)
     na_value=None,  # YoY value in cases when item not exists in both lag- and train-dataframes
     inf_value=None,  # YoY value in cases when any new item just appeared (division by zero)
     discard_rows_witout_new_features=True,
@@ -177,7 +181,7 @@ def add_xox_features(
     fit_cols = list()
     max_time_offset = 0
     cur_period_field = measure
-    for x_name, x_len, shift_range in shifts:
+    for x_name, x_len, lag_range in lags:
         prev_period_field = '{}_lag_{}'.format(cur_period_field, x_len)  # field produced in add_lag_features()
         x_base = lag_dataframe[dimensions + [prev_period_field]].merge(
             train_dataframe[dimensions + [cur_period_field]],
@@ -194,15 +198,15 @@ def add_xox_features(
             x_base = x_base.fillna(0)
         if inf_value is not None:
             x_base = x_base.replace([-np.inf, np.inf], [-inf_value, inf_value])
-        for time_shift in shift_range:
+        for time_lag in lag_range:
             if verbose:
-                print(TITLE, 'Processing {} for shift {}...'.format(x_name, time_shift), end='\r')
-            lag_delta_field = '{}_{}_{}'.format(measure, x_name, time_shift)
+                print(TITLE, 'Processing {} for lag {}...'.format(x_name, time_lag), end='\r')
+            lag_delta_field = '{}_{}_{}'.format(measure, x_name, time_lag)
             shifted_data = x_base.copy()
-            shifted_data[time_field] = shifted_data[time_field] + time_shift
+            shifted_data[time_field] = shifted_data[time_field] + time_lag
             shifted_data = shifted_data.rename(columns={x_name: lag_delta_field})
             dataframe = dataframe.merge(shifted_data, on=dimensions, how='left').fillna(0)
-            max_time_offset = max(max_time_offset, x_len + time_shift)
+            max_time_offset = max(max_time_offset, x_len + time_lag)
             fit_cols.append(lag_delta_field)
             gc.collect();
     if discard_rows_witout_new_features:
