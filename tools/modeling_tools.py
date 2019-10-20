@@ -1,14 +1,5 @@
-import os
 import gc
-import random
-from itertools import product
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import lightgbm as lgb
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-from sklearn.metrics import mean_squared_error as mse_score
 
 
 def split_train_and_test_by_month(
