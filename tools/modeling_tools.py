@@ -2,15 +2,12 @@ import gc
 import numpy as np
 
 
-def split_train_and_test_by_month(
-    dataframe, 
-    month_field='date_m_no', fold_no=0,
-):
-    months = sorted(dataframe[month_field].unique())
-    test_month = months[-1 - fold_no]
-    df_train = dataframe[dataframe[month_field] < test_month]
-    df_test = dataframe[dataframe[month_field] == test_month]
-    return df_train, df_test
+def split_train_and_test_by_time(dataframe, time_field, fold_no=0, test_len=1):
+    times = sorted(dataframe[time_field].unique())
+    test_time = times[-1 - fold_no * test_len]
+    train = dataframe[dataframe[time_field] < test_time]
+    test = dataframe[(dataframe[time_field] >= test_time) & (dataframe[time_field] < test_time + test_len)]
+    return train, test
 
 
 def split_X_and_y(
