@@ -164,6 +164,80 @@ def add_lag_features(
     return dataframe
 
 
+def add_rolling_sum_features(
+    dataframe,
+    train_dataframe,
+    measures=MEASURES, dimensions=DIMENSIONS, time_field=TIME_FIELD, 
+    lag_range=TIME_RANGE, len_range=TIME_RANGE,
+    discard_rows_witout_new_features=True,
+    verbose=True,
+):
+    # Generalization of add_lag_features() and add_agg_features()
+    # dimensions must not include time-field
+    TITLE = 'add_sum_features():'
+    result = dataframe.copy()
+    available_times = train_dataframe[time_field].unique()
+    for time_window_len in len_range:
+        if verbose:
+            print(TITLE, 'Processing len {}...'.format(time_window_len), end='\r')
+        df_for_cur_len = train_dataframe.copy()
+        grid = list()
+
+        for cur_time in available_times:
+            if verbose:
+                print(TITLE, 'Processing len {}, time {}...'.format(time_window_len, cur_time), end='\r')
+            filtred_dataframe = df_for_cur_len[
+                (df_for_cur_len[time_field] >= cur_time) &
+                (df_for_cur_len[time_field] <= cur_time - time_window_len + 1)
+            ]
+            sum_dataframe = filtred_dataframe.groupby(
+                dimensions,
+                as_index=False,
+            ).agg(
+                {m: 'sum' for m in measures}
+            ).rename(
+                columns={m: '{}_lag{}_sum{}'.format(m, 0, time_window_len) for m in measures}
+            )
+            sum_dataframe[time_field] = cur_time
+            grid.append(sum_dataframe.copy())
+            gc.collect()
+        grid = pd.DataFrame(np.vstack(grid), columns=sum_dataframe.columns, dtype=np.int32)
+        df_for_cur_len = df_for_cur_len.merge(
+            grid,
+            on=dimensions + [time_field],
+            how='left',
+        )
+        gc.collect()
+
+        for time_lag in lag_range:
+            if verbose:
+                print(TITLE, 'Shifting lag {}, len {}...'.format(time_lag, time_window_len), end='\r')
+            shifted_dataframe = df_for_cur_len.copy()
+            shifted_dataframe[time_field] = shifted_dataframe[time_field] + time_lag
+            rename_fields = {
+                '{}_lag{}_sum{}'.format(m, 0, time_window_len):
+                '{}_lag{}_sum{}'.format(m, time_lag, time_window_len) 
+                for m in measures
+            }
+            shifted_dataframe = shifted_dataframe.rename(columns=rename_fields)
+            if verbose:
+                print(TITLE, 'Merging lag {}, len {}...'.format(time_lag, time_window_len), ' ' * 10, end='\r')
+            result = result.merge(
+                shifted_dataframe, 
+                on=dimensions + [time_field], 
+                how='left'
+            ).fillna(0)
+            gc.collect()
+
+    if discard_rows_witout_new_features:
+        min_time_value = result[time_field].min()
+        result = result[result[time_field] >= min_time_value + min(lag_range) + min(len_range)] 
+    if verbose:
+        print(TITLE, 'Done.', ' ' * 50)
+    gc.collect()
+    return result
+
+
 def add_xox_features(
     dataframe,  # train or test
     lag_dataframe,  # lag_dataframe must include lag-features from add_lag_features()
