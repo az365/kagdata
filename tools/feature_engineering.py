@@ -176,20 +176,25 @@ def add_rolling_sum_features(
     # dimensions must not include time-field
     TITLE = 'add_sum_features():'
     result = dataframe.copy()
+    target_times = dataframe[time_field].unique()
     available_times = train_dataframe[time_field].unique()
-    min_available_time = available_times.min()
+    min_target_time, max_target_time = target_times.min(), target_times.max()
+    min_available_time, max_available_time = available_times.min(), available_times.max()
     for time_window_len in len_range:
         if verbose:
             print(TITLE, 'Processing len {}...'.format(time_window_len), end='\r')
-        df_for_cur_len = train_dataframe.copy()
         grid = list()
+        cropped_dataframe = train_dataframe[
+            (train_dataframe[time_field] >= min_target_time - max(lag_range) - time_window_len + 1) &
+            (train_dataframe[time_field] <= max_target_time - min(lag_range))
+        ]
 
         for cur_time in available_times:
             if verbose:
                 print(TITLE, 'Processing len {}, time {}...'.format(time_window_len, cur_time), end='\r')
-            filtred_dataframe = df_for_cur_len[
-                (df_for_cur_len[time_field] >= cur_time - time_window_len + 1) &
-                (df_for_cur_len[time_field] <= cur_time)
+            filtred_dataframe = cropped_dataframe[
+                (cropped_dataframe[time_field] >= cur_time - time_window_len + 1) &
+                (cropped_dataframe[time_field] <= cur_time)
             ]
             sum_dataframe = filtred_dataframe.groupby(
                 dimensions,
@@ -203,7 +208,7 @@ def add_rolling_sum_features(
             grid.append(sum_dataframe.copy())
             gc.collect()
         grid = pd.DataFrame(np.vstack(grid), columns=sum_dataframe.columns, dtype=np.int32)
-        df_for_cur_len = df_for_cur_len.merge(
+        cropped_dataframe = cropped_dataframe.merge(
             grid,
             on=dimensions + [time_field],
             how='left',
@@ -213,7 +218,7 @@ def add_rolling_sum_features(
         for time_lag in lag_range:
             if verbose:
                 print(TITLE, 'Shifting lag {}, len {}...'.format(time_lag, time_window_len), end='\r')
-            shifted_dataframe = df_for_cur_len.copy()
+            shifted_dataframe = cropped_dataframe.copy()
             shifted_dataframe[time_field] = shifted_dataframe[time_field] + time_lag
             rename_fields = {
                 '{}_lag{}_sum{}'.format(m, 0, time_window_len):
@@ -231,7 +236,10 @@ def add_rolling_sum_features(
             gc.collect()
 
     if discard_rows_witout_new_features:
-        result = result[result[time_field] >= min_available_time + min(lag_range) + min(len_range) - 1] 
+        result = result[
+            (result[time_field] >= min_available_time + max(lag_range) + max(len_range) - 1) &
+            (result[time_field] <= max_available_time + min(lag_range) + min(lag_range))
+        ]
     if verbose:
         print(TITLE, 'Done.', ' ' * 50)
     gc.collect()
