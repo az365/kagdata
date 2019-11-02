@@ -177,6 +177,7 @@ def add_rolling_sum_features(
     TITLE = 'add_sum_features():'
     result = dataframe.copy()
     available_times = train_dataframe[time_field].unique()
+    min_available_time = available_times.min()
     for time_window_len in len_range:
         if verbose:
             print(TITLE, 'Processing len {}...'.format(time_window_len), end='\r')
@@ -187,8 +188,8 @@ def add_rolling_sum_features(
             if verbose:
                 print(TITLE, 'Processing len {}, time {}...'.format(time_window_len, cur_time), end='\r')
             filtred_dataframe = df_for_cur_len[
-                (df_for_cur_len[time_field] >= cur_time) &
-                (df_for_cur_len[time_field] <= cur_time - time_window_len + 1)
+                (df_for_cur_len[time_field] >= cur_time - time_window_len + 1) &
+                (df_for_cur_len[time_field] <= cur_time)
             ]
             sum_dataframe = filtred_dataframe.groupby(
                 dimensions,
@@ -230,8 +231,7 @@ def add_rolling_sum_features(
             gc.collect()
 
     if discard_rows_witout_new_features:
-        min_time_value = result[time_field].min()
-        result = result[result[time_field] >= min_time_value + min(lag_range) + min(len_range)] 
+        result = result[result[time_field] >= min_available_time + min(lag_range) + min(len_range) - 1] 
     if verbose:
         print(TITLE, 'Done.', ' ' * 50)
     gc.collect()
