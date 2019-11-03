@@ -118,6 +118,7 @@ def add_agg_features(
         (train_dataframe[time_field] >= min_time) &
         (train_dataframe[time_field] <= max_time)
     ]
+
     result = dataframe.copy()
     for sum_by in dimension_combinations:
         if verbose:
@@ -169,6 +170,7 @@ def add_rolling_features(
     train_dataframe,
     measures=MEASURES, dimensions=DIMENSIONS, time_field=TIME_FIELD, 
     lag_range=TIME_RANGE, len_range=TIME_RANGE,
+    field_name_template='{1}_lag{2}_{0}{3}',
     add_sums=True, add_means=True,
     discard_rows_witout_new_features=True,
     verbose=True,
@@ -176,6 +178,8 @@ def add_rolling_features(
     # Generalization of add_lag_features() and add_agg_features()
     # Dimensions must not include time-field
     TITLE = 'add_rolling_features():'
+    sum_field = field_name_template.format('sum', '{0}', '{1}', '{2}')
+    avg_field = field_name_template.format('avg', '{0}', '{1}', '{2}')
     result = dataframe.copy()
     target_times = dataframe[time_field].unique()
     available_times = train_dataframe[time_field].unique()
@@ -203,7 +207,7 @@ def add_rolling_features(
             ).agg(
                 {m: 'sum' for m in measures}
             ).rename(
-                columns={m: '{}_lag{}_sum{}'.format(m, 0, time_window_len) for m in measures}
+                columns={m: sum_field.format(m, 0, time_window_len) for m in measures}
             )
             sum_dataframe[time_field] = cur_time
             grid.append(sum_dataframe.copy())
@@ -222,13 +226,13 @@ def add_rolling_features(
             shifted_dataframe = cropped_dataframe.copy()
             shifted_dataframe[time_field] = shifted_dataframe[time_field] + time_lag
             rename_fields = {
-                '{}_lag{}_sum{}'.format(m, 0, time_window_len):
-                '{}_lag{}_sum{}'.format(m, time_lag, time_window_len) 
+                sum_field.format(m, 0, time_window_len):
+                sum_field.format(m, time_lag, time_window_len) 
                 for m in measures
             }
             shifted_dataframe = shifted_dataframe.rename(columns=rename_fields)
             if verbose:
-                print(TITLE, 'Merging lag {}, len {}...'.format(time_lag, time_window_len), ' ' * 10, end='\r')
+                print(TITLE, 'Merging lag {}, len {}...'.format(time_lag, time_window_len), ' ' * 30, end='\r')
             result = result.merge(
                 shifted_dataframe, 
                 on=dimensions + [time_field], 
@@ -241,11 +245,9 @@ def add_rolling_features(
             for time_lag in lag_range:
                 triple = (m, time_lag, time_window_len)
                 if add_means:
-                    result['{}_lag{}_avg{}'.format(*triple)] = (
-                        result['{}_lag{}_sum{}'.format(*triple)] / time_window_len
-                    )
+                    result[avg_field.format(*triple)] = result[sum_field.format(*triple)] / time_window_len
                 if not add_sums:
-                    result.drop(columns='{}_lag{}_sum{}'.format(*triple))
+                    result.drop(columns=sum_field.format(*triple))
 
     if discard_rows_witout_new_features:  # and without incomplete sums
         result = result[
