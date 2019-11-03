@@ -164,7 +164,7 @@ def add_lag_features(
     return dataframe
 
 
-def add_rolling_sum_features(
+def add_rolling_features(
     dataframe,
     train_dataframe,
     measures=MEASURES, dimensions=DIMENSIONS, time_field=TIME_FIELD, 
@@ -174,8 +174,8 @@ def add_rolling_sum_features(
     verbose=True,
 ):
     # Generalization of add_lag_features() and add_agg_features()
-    # dimensions must not include time-field
-    TITLE = 'add_sum_features():'
+    # Dimensions must not include time-field
+    TITLE = 'add_rolling_features():'
     result = dataframe.copy()
     target_times = dataframe[time_field].unique()
     available_times = train_dataframe[time_field].unique()
@@ -247,7 +247,7 @@ def add_rolling_sum_features(
                 if not add_sums:
                     result.drop(columns='{}_lag{}_sum{}'.format(*triple))
 
-    if discard_rows_witout_new_features:
+    if discard_rows_witout_new_features:  # and without incomplete sums
         result = result[
             (result[time_field] >= min_available_time + max(lag_range) + max(len_range) - 1) &
             (result[time_field] <= max_available_time + min(lag_range) + min(lag_range))
