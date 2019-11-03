@@ -169,6 +169,7 @@ def add_rolling_sum_features(
     train_dataframe,
     measures=MEASURES, dimensions=DIMENSIONS, time_field=TIME_FIELD, 
     lag_range=TIME_RANGE, len_range=TIME_RANGE,
+    add_sums=True, add_means=True,
     discard_rows_witout_new_features=True,
     verbose=True,
 ):
@@ -234,6 +235,17 @@ def add_rolling_sum_features(
                 how='left'
             ).fillna(0)
             gc.collect()
+
+    for m in measures:
+        for time_window_len in len_range:
+            for time_lag in lag_range:
+                triple = (m, time_lag, time_window_len)
+                if add_means:
+                    result['{}_lag{}_avg{}'.format(*triple)] = (
+                        result['{}_lag{}_sum{}'.format(*triple)] / time_window_len
+                    )
+                if not add_sums:
+                    result.drop(columns='{}_lag{}_sum{}'.format(*triple))
 
     if discard_rows_witout_new_features:
         result = result[
