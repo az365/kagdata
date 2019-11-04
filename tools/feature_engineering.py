@@ -140,7 +140,7 @@ def add_lag_features(
     dataframe, train_dataframe,
     fields_for_lag=MEASURES, key_fields=KEY_FIELDS, time_field=TIME_FIELD,
     lag_range=TIME_RANGE, 
-    discard_rows_witout_new_features=True,
+    discard_rows_without_new_features=True,
     verbose=True,
 ):
     TITLE = 'add_lag_features():'
@@ -153,7 +153,7 @@ def add_lag_features(
         sales_shift = sales_shift.rename(columns=rename_fields)
         dataframe = dataframe.merge(sales_shift, on=key_fields, how='left').fillna(0)
         gc.collect();
-    if discard_rows_witout_new_features:  # don't use old data without shifted dates
+    if discard_rows_without_new_features:  # don't use old data without shifted dates
         dataframe = dataframe[dataframe[time_field] >= MIN_TIME_VALUE + max(lag_range)] 
     if verbose:
         print(TITLE, 'Done.', ' ' * 50)
@@ -172,7 +172,7 @@ def add_rolling_features(
     lag_range=TIME_RANGE, len_range=TIME_RANGE,
     field_name_template='{1}_lag{2}_{0}{3}',
     add_sums=True, add_means=True,
-    discard_rows_witout_new_features=True,
+    discard_rows_without_new_features=True,
     verbose=True,
 ):
     # Generalization of add_lag_features() and add_agg_features()
@@ -250,7 +250,7 @@ def add_rolling_features(
                 if not add_sums:
                     result.drop(columns=sum_field.format(*triple))
 
-    if discard_rows_witout_new_features:  # and without incomplete sums
+    if discard_rows_without_new_features:  # and without incomplete sums
         result = result[
             (result[time_field] >= min_available_time + max(lag_range) + max(len_range) - 1) &
             (result[time_field] <= max_available_time + min(lag_range))
@@ -269,7 +269,7 @@ def add_xox_features(
     lags=[('yoy', YEAR_LEN, TIME_RANGE[:3]), ('mom', MONTH_LEN, TIME_RANGE[:4])],  # (x_name, x_len, lag_range)
     na_value=None,  # YoY value in cases when item not exists in both lag- and train-dataframes
     inf_value=None,  # YoY value in cases when any new item just appeared (division by zero)
-    discard_rows_witout_new_features=True,
+    discard_rows_without_new_features=True,
     verbose=True,
 ):
     # For every month point adding YoYs (Year over Year), MoMs, etc. from previous months.
@@ -306,7 +306,7 @@ def add_xox_features(
             max_time_offset = max(max_time_offset, x_len + time_lag)
             fit_cols.append(lag_delta_field)
             gc.collect();
-    if discard_rows_witout_new_features:
+    if discard_rows_without_new_features:
         dataframe = dataframe[dataframe[time_field] >= MIN_TIME_VALUE + max_time_offset]
     to_drop_cols = list(set(list(dataframe.columns)) - (set(fit_cols)|set(dimensions))) + [time_field] 
     if verbose:
