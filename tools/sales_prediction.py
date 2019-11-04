@@ -127,6 +127,13 @@ def prepare_lgbm_features(dataframe, train_dataframe=None):
         dimension_combinations=SENSIBLE_DIMENSION_COMBINATIONS, 
         take_last_times=2 * YEAR_LEN, test_len=TEST_LEN,
     )
+    result = fe.add_rolling_features(
+        result, train_dataframe,
+        MEASURES,
+        CAT_DIMENSIONS, TIME_FIELD,
+        lag_range=TIME_RANGE, len_range=TIME_RANGE,
+        add_sums=False, add_means=True,
+    )
     return result
 
 
