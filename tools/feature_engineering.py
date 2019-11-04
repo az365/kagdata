@@ -193,6 +193,7 @@ def add_rolling_features(
             (train_dataframe[time_field] >= min_target_time - max(lag_range) - time_window_len + 1) &
             (train_dataframe[time_field] <= max_target_time - min(lag_range))
         ]
+        cropped_dataframe = cropped_dataframe[measures + dimensions + [time_field]]
 
         for cur_time in available_times:
             if verbose:
@@ -223,7 +224,7 @@ def add_rolling_features(
         for time_lag in lag_range:
             if verbose:
                 print(TITLE, 'Shifting lag {}, len {}...'.format(time_lag, time_window_len), end='\r')
-            shifted_dataframe = cropped_dataframe.copy()
+            shifted_dataframe = cropped_dataframe.drop(columns=measures)
             shifted_dataframe[time_field] = shifted_dataframe[time_field] + time_lag
             rename_fields = {
                 sum_field.format(m, 0, time_window_len):
@@ -252,7 +253,7 @@ def add_rolling_features(
     if discard_rows_witout_new_features:  # and without incomplete sums
         result = result[
             (result[time_field] >= min_available_time + max(lag_range) + max(len_range) - 1) &
-            (result[time_field] <= max_available_time + min(lag_range) + min(lag_range))
+            (result[time_field] <= max_available_time + min(lag_range))
         ]
     if verbose:
         print(TITLE, 'Done.', ' ' * 50)
