@@ -3,9 +3,10 @@ from itertools import product
 import numpy as np
 import pandas as pd
 
-import feature_engineering as fe
-import modeling_tools as mt
-
+try:  # Assume we're a sub-module in a package.
+    from . import feature_engineering as fe
+except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
+    import feature_engineering as fe
 
 TARGET = 'cnt'
 MEASURES = [TARGET]  # also can be ['cnt', 'price, 'revenue']
@@ -17,9 +18,9 @@ ALL_DIMENSIONS = [TIME_FIELD] + CAT_DIMENSIONS
 MIN_DIMENSIONS = ['shop_id', 'item_id']  # cat_id can be derived from item_id
 KEY_FIELDS = [TIME_FIELD] + MIN_DIMENSIONS
 SENSIBLE_DIMENSION_COMBINATIONS = [  # taking into account the hierarchy cat_id/item_id
-    ('shop_id'), 
-    ('cat_id'), 
-    ('item_id'),
+    ('shop_id', ),
+    ('cat_id', ),
+    ('item_id', ),
     ('shop_id', 'cat_id'), 
     ('shop_id', 'item_id'), 
 ]
@@ -124,7 +125,7 @@ def prepare_lgbm_features(dataframe, train_dataframe=None):
         result, train_dataframe, 
         MEASURES, CAT_DIMENSIONS, TIME_FIELD, 
         dimension_combinations=SENSIBLE_DIMENSION_COMBINATIONS, 
-        take_last_times=2 * YEAR_LEN, test_len=TEST_LEN
+        take_last_times=2 * YEAR_LEN, test_len=TEST_LEN,
     )
     return result
 
