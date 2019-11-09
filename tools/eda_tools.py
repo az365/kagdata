@@ -193,6 +193,25 @@ def plot_multiple(
         block.legend(loc='best')
 
 
+def plot_hist(series, log=False, bins=None, max_bins=75, default_bins=10, max_value=1e3):
+    uniq_cnt = len(series.unique())
+    if max_value is not None:
+        filtered_series = series[series < max_value]
+        filtred_cnt = len(filtered_series)
+        print(uniq_cnt, '->', filtred_cnt)
+        uniq_cnt = filtred_cnt
+    else:
+        print(uniq_cnt)
+    filtered_series = series
+    if bins:
+        pass
+    elif uniq_cnt < max_bins:
+        bins = uniq_cnt
+    else:
+        bins = default_bins
+    filtered_series.hist(log=log, bins=bins)
+
+
 def get_tops(dataframe, fields=['shop', 'cat', 'item'], n=8, by='cnt'):
     result = list()
     for field in fields:
