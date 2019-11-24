@@ -30,16 +30,16 @@ def add_more_date_fields(dataframe, date_field='date'):
 
 
 def add_agg_by_slices(
-    dataframe, train_dataframe=None,
-    measures=MEASURES, dimensions=DIMENSIONS, 
-    by=DIMENSIONS[0], 
-    sum_field='{}_sum_by_{}', share_field='{}_share_from_{}', mean_field='{}_mean_by_{}', size_field='size_by_{}',
-    mean_only=False,
-    group_size=None,
-    fillna=0,
-    verbose=True,
+        dataframe, train_dataframe=None,
+        measures=MEASURES, dimensions=DIMENSIONS,
+        by=DIMENSIONS[0],
+        sum_field='{}_sum_by_{}', share_field='{}_share_from_{}', mean_field='{}_mean_by_{}', size_field='size_by_{}',
+        mean_only=False,
+        group_size=None,
+        fillna=0,
+        verbose=True,
 ):
-    TITLE = 'add_sums_by_slices(by={}):'.format(by)
+    title = 'add_agg_by_slices(by={}):'.format(by)
     if train_dataframe is None:
         train_dataframe = dataframe
     if isinstance(by, str):
@@ -50,7 +50,7 @@ def add_agg_by_slices(
         by_str = '_and_'.join(by)
     common_dimensions = list(set(dimensions) - by_set)
     if verbose:
-        print(TITLE, 'Computing sums...', end='\r')
+        print(title, 'Computing sums...', end='\r')
 
     sum_data = train_dataframe.groupby(
         common_dimensions,
@@ -61,7 +61,7 @@ def add_agg_by_slices(
         columns={m: sum_field.format(m, by_str) for m in measures}
     )
     if verbose:
-        print(TITLE, 'Merging...', end='\r')
+        print(title, 'Merging...', end='\r')
     result = dataframe.merge(
         sum_data,
         on=common_dimensions,
@@ -72,7 +72,7 @@ def add_agg_by_slices(
         result[size_field.format(by_str)] = group_size
     else:
         if verbose:
-            print(TITLE, 'Computing group sizes...', end='\r')
+            print(title, 'Computing group sizes...', end='\r')
         size_data = train_dataframe[common_dimensions + ['cnt']].groupby(
             common_dimensions,
             as_index=False
@@ -85,7 +85,7 @@ def add_agg_by_slices(
             how='left', 
         )
     if verbose:
-        print(TITLE, 'Computing mean...', ' '*20, end='\r')
+        print(title, 'Computing mean...', ' '*20, end='\r')
     for m in measures:
         sum_column = sum_field.format(m, by_str)
         mean_column = mean_field.format(m, by_str)
@@ -99,17 +99,17 @@ def add_agg_by_slices(
     if fillna is not None:
         result = result.fillna(fillna)
     if verbose:
-        print(TITLE, 'Done.', ' ' * 50)
+        print(title, 'Done.', ' ' * 50)
     return result
 
 
 def add_agg_features(
-    dataframe, train_dataframe,
-    measures=MEASURES, dimensions=DIMENSIONS, time_field=TIME_FIELD,
-    dimension_combinations=SENSIBLE_DIMENSION_COMBINATIONS,
-    take_last_times=REPRESENTATIVE_TIME_LEN,
-    test_len=TEST_LEN,
-    verbose=True,
+        dataframe, train_dataframe,
+        measures=MEASURES, dimensions=DIMENSIONS, time_field=TIME_FIELD,
+        dimension_combinations=SENSIBLE_DIMENSION_COMBINATIONS,
+        take_last_times=REPRESENTATIVE_TIME_LEN,
+        test_len=TEST_LEN,
+        verbose=True,
 ):
     TITLE = 'add_agg_features():'
     max_time = dataframe[time_field].max() - test_len  # exclude test dates from counters
@@ -137,16 +137,16 @@ def add_agg_features(
 
 
 def add_lag_features(
-    dataframe, train_dataframe,
-    fields_for_lag=MEASURES, key_fields=KEY_FIELDS, time_field=TIME_FIELD,
-    lag_range=TIME_RANGE, 
-    discard_rows_without_new_features=True,
-    verbose=True,
+        dataframe, train_dataframe,
+        fields_for_lag=MEASURES, key_fields=KEY_FIELDS, time_field=TIME_FIELD,
+        lag_range=TIME_RANGE,
+        discard_rows_without_new_features=True,
+        verbose=True,
 ):
-    TITLE = 'add_lag_features():'
+    title = 'add_lag_features():'
     for time_lag in lag_range:
         if verbose:
-            print(TITLE, 'Processing time-lag {}...'.format(time_lag), end='\r')
+            print(title, 'Processing time-lag {}...'.format(time_lag), end='\r')
         sales_shift = train_dataframe[key_fields + fields_for_lag].copy()
         sales_shift[time_field] = sales_shift[time_field] + time_lag
         rename_fields = lambda x: '{}_lag_{}'.format(x, time_lag) if x in fields_for_lag else x
@@ -156,28 +156,28 @@ def add_lag_features(
     if discard_rows_without_new_features:  # don't use old data without shifted dates
         dataframe = dataframe[dataframe[time_field] >= MIN_TIME_VALUE + max(lag_range)] 
     if verbose:
-        print(TITLE, 'Done.', ' ' * 50)
+        print(title, 'Done.', ' ' * 50)
         fit_cols = [col for col in dataframe.columns if col[-1] in [str(item) for item in lag_range]] 
-        print(TITLE, 'fit_cols = ', fit_cols)  # list of all lagged features
+        print(title, 'fit_cols = ', fit_cols)  # list of all lagged features
         to_drop_cols = list(set(list(dataframe.columns)) - (set(fit_cols)|set(key_fields))) + [time_field] 
-        print(TITLE, 'to_drop_cols = ', to_drop_cols)  # We will drop these at fitting stage
+        print(title, 'to_drop_cols = ', to_drop_cols)  # We will drop these at fitting stage
     gc.collect()
     return dataframe
 
 
 def add_rolling_features(
-    dataframe,
-    train_dataframe,
-    measures=MEASURES, dimensions=DIMENSIONS, time_field=TIME_FIELD, 
-    lag_range=TIME_RANGE, len_range=TIME_RANGE,
-    field_name_template='{1}_lag{2}_{0}{3}',
-    add_sums=True, add_means=True,
-    discard_rows_without_new_features=True,
-    verbose=True,
+        dataframe,
+        train_dataframe,
+        measures=MEASURES, dimensions=DIMENSIONS, time_field=TIME_FIELD,
+        lag_range=TIME_RANGE, len_range=TIME_RANGE,
+        field_name_template='{1}_lag{2}_{0}{3}',
+        add_sums=True, add_means=True,
+        discard_rows_without_new_features=True,
+        verbose=True,
 ):
     # Generalization of add_lag_features() and add_agg_features()
     # Dimensions must not include time-field
-    TITLE = 'add_rolling_features():'
+    title = 'add_rolling_features():'
     sum_field = field_name_template.format('sum', '{0}', '{1}', '{2}')
     avg_field = field_name_template.format('avg', '{0}', '{1}', '{2}')
     result = dataframe.copy()
@@ -187,7 +187,7 @@ def add_rolling_features(
     min_available_time, max_available_time = available_times.min(), available_times.max()
     for time_window_len in len_range:
         if verbose:
-            print(TITLE, 'Processing len {}...'.format(time_window_len), end='\r')
+            print(title, 'Processing len {}...'.format(time_window_len), end='\r')
         grid = list()
         cropped_dataframe = train_dataframe[
             (train_dataframe[time_field] >= min_target_time - max(lag_range) - time_window_len + 1) &
@@ -197,12 +197,12 @@ def add_rolling_features(
 
         for cur_time in available_times:
             if verbose:
-                print(TITLE, 'Processing len {}, time {}...'.format(time_window_len, cur_time), end='\r')
-            filtred_dataframe = cropped_dataframe[
+                print(title, 'Processing len {}, time {}...'.format(time_window_len, cur_time), end='\r')
+            filtered_dataframe = cropped_dataframe[
                 (cropped_dataframe[time_field] >= cur_time - time_window_len + 1) &
                 (cropped_dataframe[time_field] <= cur_time)
             ]
-            sum_dataframe = filtred_dataframe.groupby(
+            sum_dataframe = filtered_dataframe.groupby(
                 dimensions,
                 as_index=False,
             ).agg(
@@ -223,7 +223,7 @@ def add_rolling_features(
 
         for time_lag in lag_range:
             if verbose:
-                print(TITLE, 'Shifting lag {}, len {}...'.format(time_lag, time_window_len), end='\r')
+                print(title, 'Shifting lag {}, len {}...'.format(time_lag, time_window_len), end='\r')
             shifted_dataframe = cropped_dataframe.drop(columns=measures)
             shifted_dataframe[time_field] = shifted_dataframe[time_field] + time_lag
             rename_fields = {
@@ -233,7 +233,7 @@ def add_rolling_features(
             }
             shifted_dataframe = shifted_dataframe.rename(columns=rename_fields)
             if verbose:
-                print(TITLE, 'Merging lag {}, len {}...'.format(time_lag, time_window_len), ' ' * 30, end='\r')
+                print(title, 'Merging lag {}, len {}...'.format(time_lag, time_window_len), ' ' * 30, end='\r')
             result = result.merge(
                 shifted_dataframe, 
                 on=dimensions + [time_field], 
@@ -256,25 +256,25 @@ def add_rolling_features(
             (result[time_field] <= max_available_time + min(lag_range))
         ]
     if verbose:
-        print(TITLE, 'Done.', ' ' * 50)
+        print(title, 'Done.', ' ' * 50)
     gc.collect()
     return result
 
 
 def add_xox_features(
-    dataframe,  # train or test
-    lag_dataframe,  # lag_dataframe must include lag-features from add_lag_features()
-    train_dataframe,  # train_dataframe must include target-field (cnt, i.e.)
-    measure=TARGET, dimensions=KEY_FIELDS, time_field=TIME_FIELD, 
-    lags=[('yoy', YEAR_LEN, TIME_RANGE[:3]), ('mom', MONTH_LEN, TIME_RANGE[:4])],  # (x_name, x_len, lag_range)
-    na_value=None,  # YoY value in cases when item not exists in both lag- and train-dataframes
-    inf_value=None,  # YoY value in cases when any new item just appeared (division by zero)
-    discard_rows_without_new_features=True,
-    verbose=True,
+        dataframe,  # train or test
+        lag_dataframe,  # lag_dataframe must include lag-features from add_lag_features()
+        train_dataframe,  # train_dataframe must include target-field (cnt, i.e.)
+        measure=TARGET, dimensions=KEY_FIELDS, time_field=TIME_FIELD,
+        lags=[('yoy', YEAR_LEN, TIME_RANGE[:3]), ('mom', MONTH_LEN, TIME_RANGE[:4])],  # (x_name, x_len, lag_range)
+        na_value=None,  # YoY value in cases when item not exists in both lag- and train-dataframes
+        inf_value=None,  # YoY value in cases when any new item just appeared (division by zero)
+        discard_rows_without_new_features=True,
+        verbose=True,
 ):
     # For every month point adding YoYs (Year over Year), MoMs, etc. from previous months.
     # Using fields added in add_lag_features(), so it should run after that.
-    TITLE = 'add_xox_features():'
+    title = 'add_xox_features():'
     fit_cols = list()
     max_time_offset = 0
     cur_period_field = measure
@@ -297,7 +297,7 @@ def add_xox_features(
             x_base = x_base.replace([-np.inf, np.inf], [-inf_value, inf_value])
         for time_lag in lag_range:
             if verbose:
-                print(TITLE, 'Processing {} for lag {}...'.format(x_name, time_lag), end='\r')
+                print(title, 'Processing {} for lag {}...'.format(x_name, time_lag), end='\r')
             lag_delta_field = '{}_{}_{}'.format(measure, x_name, time_lag)
             shifted_data = x_base.copy()
             shifted_data[time_field] = shifted_data[time_field] + time_lag
@@ -310,9 +310,9 @@ def add_xox_features(
         dataframe = dataframe[dataframe[time_field] >= MIN_TIME_VALUE + max_time_offset]
     to_drop_cols = list(set(list(dataframe.columns)) - (set(fit_cols)|set(dimensions))) + [time_field] 
     if verbose:
-        print(TITLE, 'Done.', ' ' * 50)
-        print(TITLE, 'fit_cols = ', fit_cols)  # list of all added features
-        print(TITLE, 'to_drop_cols = ', to_drop_cols)  # we will drop these at fitting stage
+        print(title, 'Done.', ' ' * 50)
+        print(title, 'fit_cols = ', fit_cols)  # list of all added features
+        print(title, 'to_drop_cols = ', to_drop_cols)  # we will drop these at fitting stage
     gc.collect()
     return dataframe
 

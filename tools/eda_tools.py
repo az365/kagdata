@@ -7,7 +7,7 @@ from itertools import product
 import gc
 
 
-def get_aggregate(data, dimensions, measures=['cnt', 'revenue'], aggregator='sum', relation_field='price', add_x=-1):
+def get_aggregate(data, dimensions, measures=('cnt', 'revenue'), aggregator='sum', relation_field='price', add_x=-1):
     result = data.groupby(
         dimensions, 
         as_index=False,
@@ -57,7 +57,7 @@ def get_vstack_dataset(datasets):
     return pd.DataFrame(np.vstack(stack), columns=new_columns)    
 
 
-def get_unpivot(dataframe, fields_from=['cnt', 'revenue'], field_to='measure', value_to='value'):
+def get_unpivot(dataframe, fields_from=('cnt', 'revenue'), field_to='measure', value_to='value'):
     stack = list()
     new_columns = list()
     for cur_field in fields_from:
@@ -75,7 +75,7 @@ def get_top_n_by(dataframe, field='cat_id', n=10, by='cnt'):
         cat_sizes = dataframe.groupby(field).agg({by: 'sum'}).sort_values(by, ascending=False)
     else:
         cat_sizes = dataframe.groupby(field).size().sort_values(ascending=False)
-    if (len(cat_sizes) > n):
+    if len(cat_sizes) > n:
         cat_sizes = cat_sizes[:n]
     return cat_sizes.index.tolist()
 
@@ -98,12 +98,12 @@ def crop_value(x, min_value=0, max_value=20):
 
 
 def plot_single(
-    data, x_field='x', y_field='y', 
-    cat_field=None, cat_values=None,
-    relative_y=False,
-    stackplot=False,
-    plot_legend=False, legend_location='best',
-    plot=plt, 
+        data, x_field='x', y_field='y',
+        cat_field=None, cat_values=None,
+        relative_y=False,
+        stackplot=False,
+        plot_legend=False, legend_location='best',
+        plot=plt,
 ):
     if relative_y:
         sum_y = data.groupby(x_field).agg({y_field: 'sum'})[y_field]
@@ -111,9 +111,9 @@ def plot_single(
         if not cat_values:
             cat_values = data[cat_field].unique()
         for cur_cat_value in cat_values:
-            filtred_data = data[data[cat_field] == cur_cat_value]
-            x_values = filtred_data[x_field]
-            y_values = filtred_data[y_field]
+            filtered_data = data[data[cat_field] == cur_cat_value]
+            x_values = filtered_data[x_field]
+            y_values = filtered_data[y_field]
             if relative_y:
                 y_values = y_values / sum_y
             if stackplot:
@@ -137,16 +137,16 @@ def plot_single(
 
 
 def plot_multiple(
-    dataframe,
-    x_range_field='shop_id', y_range_field='cat_id', x_range_values=None, y_range_values=None,
-    x_axis_field='x', y_axis_field='cnt',
-    cat_field=None, cat_values=None,
-    stackplot=False,
-    relative_y=False,
-    max_cells_count=(16, 16),
-    figsize=(15, 8),
-    agg='sum',
-    verbose=True,
+        dataframe,
+        x_range_field='shop_id', y_range_field='cat_id', x_range_values=None, y_range_values=None,
+        x_axis_field='x', y_axis_field='cnt',
+        cat_field=None, cat_values=None,
+        stackplot=False,
+        relative_y=False,
+        max_cells_count=(16, 16),
+        figsize=(15, 8),
+        agg='sum',
+        verbose=True,
 ):
     if agg:
         dimensions = {x_range_field, y_range_field, x_axis_field, cat_field} - {None}
@@ -197,9 +197,9 @@ def plot_hist(series, log=False, bins=None, max_bins=75, default_bins=10, max_va
     uniq_cnt = len(series.unique())
     if max_value is not None:
         filtered_series = series[series < max_value]
-        filtred_cnt = len(filtered_series)
-        print(uniq_cnt, '->', filtred_cnt)
-        uniq_cnt = filtred_cnt
+        filtered_cnt = len(filtered_series)
+        print(uniq_cnt, '->', filtered_cnt)
+        uniq_cnt = filtered_cnt
     else:
         print(uniq_cnt)
     filtered_series = series
@@ -212,7 +212,7 @@ def plot_hist(series, log=False, bins=None, max_bins=75, default_bins=10, max_va
     filtered_series.hist(log=log, bins=bins)
 
 
-def get_tops(dataframe, fields=['shop', 'cat', 'item'], n=8, by='cnt'):
+def get_tops(dataframe, fields=('shop', 'cat', 'item'), n=8, by='cnt'):
     result = list()
     for field in fields:
         id_field, name_field = '{}_id'.format(field), '{}_name'.format(field)

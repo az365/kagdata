@@ -11,11 +11,11 @@ def split_train_and_test_by_time(dataframe, time_field, fold_no=0, test_len=1):
 
 
 def split_X_and_y(
-    dataframe, 
-    target_field='cnt', 
-    feature_fields=None, 
-    leaky_fields=['target', 'cnt', 'revenue', 'is_non_zero'],
-    output_feature_list=False,
+        dataframe,
+        target_field='cnt',
+        feature_fields=None,
+        leaky_fields=('target', 'cnt', 'revenue', 'is_non_zero'),
+        output_feature_list=False,
 ):
     y = dataframe[target_field]
     if feature_fields:

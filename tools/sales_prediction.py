@@ -49,10 +49,10 @@ def add_initial_features_to_kaggle_test(dataframe, items_dataframe, time_value):
 
 
 def all_shops_and_items_by_times(
-    dataframe, 
-    verbose=True,
+        dataframe,
+        verbose=True,
 ):
-    TITLE = 'all_shops_and_items():'
+    title = 'all_shops_and_items_by_times():'
     grid = list()
     shops_list = sorted(dataframe['shop_id'].unique())
     items_list = sorted(dataframe['item_id'].unique())
@@ -60,11 +60,11 @@ def all_shops_and_items_by_times(
     for cur_time in times_list:
         appending_block = np.array(list(product(*[shops_list, items_list, [cur_time]])), dtype='int32')
         if verbose:
-            print(TITLE, 'Adding month {}...'.format(cur_time), end='\r')
+            print(title, 'Adding time block {}...'.format(cur_time), end='\r')
         grid.append(appending_block)
     grid = pd.DataFrame(np.vstack(grid), columns=['shop_id', 'item_id', TIME_FIELD], dtype=np.int32)
     if verbose:
-        print(TITLE, 'Done.', 'appending_block.shape={}, grid.shape={}'.format(appending_block.shape, grid.shape))
+        print(title, 'Done.', 'appending_block.shape={}, grid.shape={}'.format(appending_block.shape, grid.shape))
     return grid
 
 
@@ -72,8 +72,8 @@ def extend_train_by_zero_items(dataframe, key_fields=KEY_FIELDS, verbose=True):
     grid = all_shops_and_items_by_times(dataframe, verbose=verbose)
     dataframe['is_non_zero'] = 1
     if verbose:
-        TITLE = 'extend_train_by_zero_items():'
-        print(TITLE, 'Merging grid...', end='\r')
+        title = 'extend_train_by_zero_items():'
+        print(title, 'Merging grid...', end='\r')
     result = grid.merge(
         dataframe, 
         on=key_fields,
@@ -81,14 +81,14 @@ def extend_train_by_zero_items(dataframe, key_fields=KEY_FIELDS, verbose=True):
     ).fillna(0) 
     del grid
     if verbose:
-        print(TITLE, 'Done.', ' ' * 50, end='\r')
+        print(title, 'Done.', ' ' * 50, end='\r')
     gc.collect()
     return result
 
 
 def apply_zero_ones_to_dataframe(dataframe, zero_ones_model, target_field=TARGET, key_fields=CAT_DIMENSIONS[:2]):
     # When pair (shop, category) is constantly zero, we can fill target all relevant rows by zeroes
-    non_zero = zero_ones_model.predict(dataset[key_fields].values)
+    non_zero = zero_ones_model.predict(dataframe[key_fields].values)
     result = dataframe.copy()
     result[target_field] = result[target_field] * non_zero
     return result
@@ -138,20 +138,20 @@ def prepare_lgbm_features(dataframe, train_dataframe=None):
 
 
 def form_kaggle_submission(
-    predicts, test_df, 
-    try_no=None, filename_template='submission{:0>3d}.csv', 
-    return_df=False, verbose=True
+        predicts, test_df,
+        try_no=None, filename_template='submission{:0>3d}.csv',
+        return_df=False, verbose=True,
 ):
-    TITLE = 'form_kaggle_submission():'
+    title = 'form_kaggle_submission():'
     assert len(predicts) == test_df.shape[0]
     result = pd.DataFrame(data={'ID': test_df['ID'], 'item_cnt_month': predicts})  # ID,item_cnt_month
     save_df = try_no and filename_template
     if save_df:
         filename = filename_template.format(try_no)
         if verbose:
-            print(TITLE, 'Saving {}...'.format(filename), end='\r')
+            print(title, 'Saving {}...'.format(filename), end='\r')
         result.to_csv(filename, index=False)
         if verbose:
-            print(TITLE, 'File {} saved.'.format(filename))
+            print(title, 'File {} saved.'.format(filename))
     if return_df:
         return result
