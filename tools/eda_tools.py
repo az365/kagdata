@@ -1,10 +1,6 @@
 import pandas as pd
 import numpy as np
-import os
 import matplotlib.pyplot as plt
-import random
-from itertools import product
-import gc
 
 
 def get_aggregate(data, dimensions, measures=('cnt', 'revenue'), aggregator='sum', relation_field='price', add_x=-1):
@@ -25,17 +21,17 @@ def get_aggregate(data, dimensions, measures=('cnt', 'revenue'), aggregator='sum
 
 
 def get_split_aggregate(data, by, values=None):
-    splitted_aggregate = list()
+    split_aggregate = list()
     if by:
         if not values:
             values = data[by].unique()
         for cur_value in values:
-            splitted_aggregate.append(
+            split_aggregate.append(
                 data[data[by] == cur_value]
             )
     else:  # if by is None
-        splitted_aggregate.append(data)
-    return splitted_aggregate
+        split_aggregate.append(data)
+    return split_aggregate
 
 
 def get_vstack_dataset(datasets):
@@ -78,6 +74,20 @@ def get_top_n_by(dataframe, field='cat_id', n=10, by='cnt'):
     if len(cat_sizes) > n:
         cat_sizes = cat_sizes[:n]
     return cat_sizes.index.tolist()
+
+
+def get_tops(dataframe, fields=('shop', 'cat', 'item'), n=8, by='cnt', dict_ids={}, verbose=True):
+    result = list()
+    for field in fields:
+        id_field, name_field = '{}_id'.format(field), '{}_name'.format(field)
+        top_ids = get_top_n_by(dataframe, field=id_field, n=n, by=by)
+        result.append(top_ids.copy())
+        cur_dict = dict_ids[field]
+        if verbose:
+            print('Top {} {}s by {}:'.format(n, field, by))
+            for i in top_ids:
+                print('    {}: {}'.format(i, cur_dict[cur_dict[id_field] == i][name_field].values[0]))
+    return result
 
 
 def convert_64_to_32(dataframe):
@@ -210,19 +220,6 @@ def plot_hist(series, log=False, bins=None, max_bins=75, default_bins=10, max_va
     else:
         bins = default_bins
     filtered_series.hist(log=log, bins=bins)
-
-
-def get_tops(dataframe, fields=('shop', 'cat', 'item'), n=8, by='cnt'):
-    result = list()
-    for field in fields:
-        id_field, name_field = '{}_id'.format(field), '{}_name'.format(field)
-        top_ids = get_top_n_by(sales_d, field=id_field, n=n, by=by)
-        result.append(top_ids.copy())
-        cur_dict = DICT_IDS[field]
-        print('Top {} {}s by {}:'.format(n, field, by))
-        for i in top_ids:
-            print('    {}: {}'.format(i, cur_dict[cur_dict[id_field] == i][name_field].values[0]))
-    return result
 
 
 def add_more_date_fields(dataframe, date_field='date'):
