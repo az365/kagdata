@@ -7,6 +7,7 @@ TIME_FIELD = 'date_m_no'
 MIN_TIME_VALUE, MONTH_LEN, YEAR_LEN, TEST_LEN = 0, 1, 12, 1
 TIME_RANGE = [1, 2, 3, 6, 12]
 REPRESENTATIVE_TIME_LEN = 2 * YEAR_LEN
+MIN_YEAR = 2013
 TARGET = 'target'
 MEASURES = [TARGET]
 DIMENSIONS = ['key']
@@ -14,18 +15,21 @@ SENSIBLE_DIMENSION_COMBINATIONS = [DIMENSIONS]
 KEY_FIELDS = [TIME_FIELD] + DIMENSIONS
 
 
-def add_more_date_fields(dataframe, date_field='date'):
-    dataframe[['date_d', 'date_m', 'date_y']] = dataframe[date_field].str.split('.', expand=True).astype('int')
+def add_more_date_fields(dataframe, date_field='date', iso_mode=False, min_year=MIN_YEAR):
+    if iso_mode:
+        dataframe[['date_y', 'date_m', 'date_d']] = dataframe[date_field].str.split('-', expand=True).astype('int')
+    else:  # gost_mode
+        dataframe[['date_d', 'date_m', 'date_y']] = dataframe[date_field].str.split('.', expand=True).astype('int')
     dataframe['date_ym_str'] = dataframe.date_y.map(str) + '-' + dataframe.date_m.map(lambda m: '{:02}'.format(m))
     dataframe['date_ymd_str'] = dataframe['date_ym_str'] + '-' + dataframe.date_d.map(lambda d: '{:02}'.format(d))
     dataframe['date_ymd_dt'] = pd.to_datetime(dataframe.date_ymd_str)
     dataframe['date_wd'] = dataframe.date_ymd_dt.dt.weekday
     dataframe['date_w'] = dataframe.date_ymd_dt.dt.week
-    dataframe['date_w_no'] = (dataframe.date_y - 2013) * 53 + dataframe.date_w
+    dataframe['date_w_no'] = (dataframe.date_y - min_year) * 53 + dataframe.date_w
     dataframe['date_ym_float'] = dataframe.date_y + dataframe.date_m/12
     dataframe['date_yw_float'] = dataframe.date_y + dataframe.date_w/53
     dataframe['date_ymd_float'] = dataframe.date_y + dataframe.date_m/12 + dataframe.date_d/372
-    dataframe['date_m_no'] = (dataframe.date_y - 2013) * 12 + (dataframe.date_m - 1) * 1
+    dataframe['date_m_no'] = (dataframe.date_y - min_year) * 12 + (dataframe.date_m - 1) * 1
     return dataframe
 
 

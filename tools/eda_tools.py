@@ -222,18 +222,21 @@ def plot_hist(series, log=False, bins=None, max_bins=75, default_bins=10, max_va
     filtered_series.hist(log=log, bins=bins)
 
 
-def add_more_date_fields(dataframe, date_field='date'):
-    dataframe[['date_d', 'date_m', 'date_y']] = dataframe[date_field].str.split('.', expand=True).astype('int')
+def add_more_date_fields(dataframe, date_field='date', iso_mode=False, min_year=2013):
+    if iso_mode:
+        dataframe[['date_y', 'date_m', 'date_d']] = dataframe[date_field].str.split('-', expand=True).astype('int')
+    else:  # gost_mode
+        dataframe[['date_d', 'date_m', 'date_y']] = dataframe[date_field].str.split('.', expand=True).astype('int')
     dataframe['date_ym_str'] = dataframe.date_y.map(str) + '-' + dataframe.date_m.map(lambda m: '{:02}'.format(m))
-    dataframe['date_ymd_str'] = dataframe.date_y.map(str) + '-' + dataframe.date_m.map(lambda m: '{:02}'.format(m)) + '-' + dataframe.date_d.map(lambda d: '{:02}'.format(d))
+    dataframe['date_ymd_str'] = dataframe['date_ym_str'] + '-' + dataframe.date_d.map(lambda d: '{:02}'.format(d))
     dataframe['date_ymd_dt'] = pd.to_datetime(dataframe.date_ymd_str)
     dataframe['date_wd'] = dataframe.date_ymd_dt.dt.weekday
     dataframe['date_w'] = dataframe.date_ymd_dt.dt.week
-    dataframe['date_w_no'] = (dataframe.date_y - 2013) * 53 + dataframe.date_w
+    dataframe['date_w_no'] = (dataframe.date_y - min_year) * 53 + dataframe.date_w
     dataframe['date_ym_float'] = dataframe.date_y + dataframe.date_m/12
     dataframe['date_yw_float'] = dataframe.date_y + dataframe.date_w/53
-    dataframe['date_ymd_float'] = dataframe.date_y + dataframe.date_m/12 + sales_d.date_d/372
-    dataframe['date_m_no'] = (dataframe.date_y - 2013) * 12 + (dataframe.date_m - 1) * 1
+    dataframe['date_ymd_float'] = dataframe.date_y + dataframe.date_m/12 + dataframe.date_d/372
+    dataframe['date_m_no'] = (dataframe.date_y - min_year) * 12 + (dataframe.date_m - 1) * 1
     return dataframe
 
 
