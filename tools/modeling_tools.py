@@ -39,16 +39,20 @@ def split_X_and_y(
 
 
 class JustRemember:
-    def __init__(self, zero_ones_only=False, remember_last=False, remember_max=False, default_value=1):
+    def __init__(
+            self,
+            zero_ones_only=False, remember_last=False, remember_max=False, default_value=1,
+    ):
         self.zero_ones_only = zero_ones_only
         self.remember_last = remember_last
         self.remember_max = remember_max
         self.default_value = default_value
         self.remembered = dict()
     
-    def fit(self, X_train, y_train):
-        zero_groups = dict()
-        for features, target in zip(X_train, y_train):
+    def fit(self, X_train, y_train, verbose=True):
+        title = 'JustRemember.fit():'
+        count = len(y_train)
+        for row_no, (features, target) in enumerate(zip(X_train, y_train)):
             key = tuple(features)
             if self.zero_ones_only:
                 value = (1 if target else 0)
@@ -59,10 +63,30 @@ class JustRemember:
             elif self.remember_max:
                 if value > self.remembered.get(key):
                     self.remembered[key] = value
-        
-    def predict(self, X_test):
+            if verbose:
+                if row_no % 10000 == 0:
+                    print(
+                        title + 'Processing {}% ({} / {})...'.format(int(100 * row_no / count), row_no, count),
+                        end='\r',
+                    )
+        if verbose:
+            print(title, 'Done.', ' ' * 50)
+        gc.collect()
+
+    def predict(self, X_test, verbose=True):
+        title = 'JustRemember.predict():'
         y_test = list()
-        for features in X_test:
+        count = len(X_test)
+        for row_no, features in enumerate(X_test):
             predict = self.remembered.get(tuple(features), self.default_value)
             y_test.append(predict)
+            if verbose:
+                if row_no % 10000 == 0:
+                    print(
+                        title, 'Processing {}% ({} / {})...'.format(int(100 * row_no / count), row_no, count),
+                        end='\r',
+                    )
+        if verbose:
+            print(title, 'Done.', ' ' * 50)
+        gc.collect()
         return np.array(y_test)
