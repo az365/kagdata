@@ -24,7 +24,7 @@ def get_aggregate(data, dimensions, measures=('cnt', 'revenue'), aggregator='sum
     return result
 
 
-def get_splited_aggregate(data, by, values=None):
+def get_split_aggregate(data, by, values=None):
     splitted_aggregate = list()
     if by:
         if not values:
@@ -155,8 +155,8 @@ def plot_multiple(
     else:
         data_agg = dataframe
     
-    rows = get_splited_aggregate(data_agg, y_range_field, y_range_values)
-    cols = get_splited_aggregate(rows[0], x_range_field, x_range_values)
+    rows = get_split_aggregate(data_agg, y_range_field, y_range_values)
+    cols = get_split_aggregate(rows[0], x_range_field, x_range_values)
     rows_count = len(rows)
     cols_count = len(cols)
     max_rows_count, max_cols_count = max_cells_count
@@ -169,7 +169,7 @@ def plot_multiple(
     fig, axis = plt.subplots(rows_count, cols_count, figsize=figsize)
 
     for row_no, row_data in enumerate(rows):
-        cols = get_splited_aggregate(row_data, x_range_field, x_range_values)
+        cols = get_split_aggregate(row_data, x_range_field, x_range_values)
         for col_no, col_data in enumerate(cols):
             if row_no < rows_count and col_no < cols_count:
                 if cols_count > 1:
