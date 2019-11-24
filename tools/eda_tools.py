@@ -113,6 +113,9 @@ def plot_single(
         relative_y=False,
         stackplot=False,
         plot_legend=False, legend_location='best',
+        bbox_to_anchor=None,
+        ylim=None,
+        axis=None,
         plot=plt,
 ):
     if relative_y:
@@ -138,12 +141,16 @@ def plot_single(
                     label=cur_cat_value,
                 )
         if plot_legend:
-            plot.legend(loc=legend_location)  # loc: best, upper right, ...
+            plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
     else:
         plot.plot(
             data[x_field].tolist(),
             data[y_field].tolist(),
         )
+    if ylim:
+        plot.ylim(*ylim)
+    if axis:
+        plot.axis(axis)
 
 
 def plot_multiple(
@@ -206,13 +213,13 @@ def plot_multiple(
 def plot_hist(series, log=False, bins=None, max_bins=75, default_bins=10, max_value=1e3):
     uniq_cnt = len(series.unique())
     if max_value is not None:
-        filtered_series = series[series < max_value]
+        filtered_series = series[series <= max_value]
         filtered_cnt = len(filtered_series)
         print(uniq_cnt, '->', filtered_cnt)
         uniq_cnt = filtered_cnt
     else:
+        filtered_series = series
         print(uniq_cnt)
-    filtered_series = series
     if bins:
         pass
     elif uniq_cnt < max_bins:
