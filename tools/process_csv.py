@@ -90,9 +90,11 @@ def columns_stats(
         skip_first_row=False,
         skip_errors=True,
         output_errors=True,
+        verbose=True,
+        expected_lines_cnt=0,
         return_dataframe=False,
 ):
-    TITLE = 'columns_stats()'
+    title = 'columns_stats()'
     parsed_rows_count = 0
     unparsed_rows_count = 0
     columns_count = len(scheme)
@@ -153,7 +155,14 @@ def columns_stats(
                 if len(line_begin) > 40:
                     line_begin = line_begin[:40] + '...'
                 print(':', line_begin)
-
+        if verbose and ((n % 10000 == 0) or (expected_lines_cnt and (n >= expected_lines_cnt - 1))):
+            if expected_lines_cnt:
+                print(
+                    '{}% ({}/{}) lines processed'.format(int(100 * n / expected_lines_cnt), n, expected_lines_cnt),
+                    end='\r',
+                )
+            else:
+                print('{} lines processed'.format(n), end='\r')
     fileholder.close()
 
     distincts = [(f.keys() if isinstance(f, dict) else []) for f in histograms]
@@ -161,6 +170,7 @@ def columns_stats(
     avg_values = [i for i in map(lambda v: float(v or 0) / parsed_rows_count, sum_values)] if parsed_rows_count else []
     result = [
         ('field', [f[0] for f in scheme]),
+        ('non_zero_count', non_zero_counts),
         ('min_value', min_values),
         ('max_value', max_values),
         ('sum_value', sum_values),
@@ -171,7 +181,7 @@ def columns_stats(
     ]
     if return_dataframe:
         if unparsed_rows_count:
-            print(TITLE, ':', unparsed_rows_count, 'unparsed rows')
+            print(title, ':', unparsed_rows_count, 'unparsed rows')
         return form_dataframe(result)
     else:
         return result, unparsed_rows_count
