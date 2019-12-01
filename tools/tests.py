@@ -2,8 +2,155 @@ import pandas as pd
 
 try:  # Assume we're a sub-module in a package.
     from . import feature_engineering as fe
+    from . import records_and_sessions as rs
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
     import feature_engineering as fe
+    import records_and_sessions as rs
+
+
+AGG_SESSION_FROM_VIEWS = (  # aggregation config (field_out, agg_method, field_in),
+    ('user_id', 'first', 'user_id'),
+    ('date', 'first', 'date'),
+    ('entry_point', 'first', 'page_id'),
+    ('finish_point', 'last', 'page_id'),
+    ('fav_page_id', 'mode', 'page_id'),
+    ('fav_service_id', 'dim', 'service_id'),
+    ('fav_page_time_spent', 'main', 'time_spent'),
+    ('fav_page_clicks_cnt', 'main', 'clicks_cnt'),
+    ('views_cnt', 'count', '*'),
+    ('time_spent', 'sum', 'time_spent'),
+    ('clicks_cnt', 'sum', 'clicks_cnt'),
+    ('avg_clicks_per_view', 'avg', 'clicks_cnt'),
+)
+RECS_EXAMPLE_VIEWS = (
+    {'user_id': 123, 'date': '2019-02-01', 'service_id': 32, 'page_id': 1, 'clicks_cnt': 5, 'time_spent': 5.5},
+    {'user_id': 123, 'date': '2019-02-01', 'service_id': 32, 'page_id': 1, 'clicks_cnt': 3, 'time_spent': 4.5},
+    {'user_id': 123, 'date': '2019-02-01', 'service_id': 32, 'page_id': 2, 'clicks_cnt': 1, 'time_spent': 0.5},
+    {'user_id': 123, 'date': '2019-02-02', 'service_id': 64, 'page_id': 3, 'clicks_cnt': 7, 'time_spent': 100},
+)
+EXPECTED_SESSIONS_FROM_VIEWS = (
+    {
+        'user_id': 123, 'date': '2019-02-01',
+        'entry_point': 1, 'finish_point': 2,
+        'fav_page_id': 1, 'fav_service_id': 32,
+        'fav_page_time_spent': 10.0, 'fav_page_clicks_cnt': 8,
+        'views_cnt': 3, 'time_spent': 10.5, 'clicks_cnt': 9,
+        'avg_clicks_per_view': 3.0,
+    },
+    {
+        'user_id': 123, 'date': '2019-02-02',
+        'entry_point': 3, 'finish_point': 3,
+        'fav_page_id': 3, 'fav_service_id': 64,
+        'fav_page_time_spent': 100, 'fav_page_clicks_cnt': 7,
+        'views_cnt': 1, 'time_spent': 100, 'clicks_cnt': 7,
+        'avg_clicks_per_view': 7.0,
+    },
+)
+AGG_USER_FROM_SESSIONS = (
+    ('user_id', 'first', 'user_id'),
+    ('first_date', 'first', 'date'),
+    ('first_service_id', 'first', 'fav_service_id'),
+    ('first_page_id', 'first', 'fav_page_id'),
+    ('first_page_time_spent', 'first', 'fav_time_spent'),
+    ('fav_service_id', 'dim', 'fav_service_id'),
+    ('fav_page_id', 'dimension', 'fav_page_id'),
+    ('max_page_time_spent', 'main', 'fav_time_spent'),
+    ('time_spent', 'sum', 'time_spent'),
+    ('sessions_cnt', 'count', 'session'),
+)
+RECS_EXAMPLE_SESSIONS = (
+    {'user_id': 3, 'date': '2019-02-01', 'fav_service_id': 2, 'fav_page_id': 9, 'fav_time_spent': 5, 'time_spent': 10},
+    {'user_id': 3, 'date': '2019-02-02', 'fav_service_id': 2, 'fav_page_id': 8, 'fav_time_spent': 6, 'time_spent': 10},
+    {'user_id': 3, 'date': '2019-02-02', 'fav_service_id': 2, 'fav_page_id': 8, 'fav_time_spent': 6, 'time_spent': 10},
+    {'user_id': 3, 'date': '2019-02-03', 'fav_service_id': 2, 'fav_page_id': 9, 'fav_time_spent': 7, 'time_spent': 10},
+    {'user_id': 3, 'date': '2019-02-03', 'fav_service_id': 2, 'fav_page_id': 9, 'fav_time_spent': 7, 'time_spent': 10},
+)
+EXPECTED_USER_FROM_SESSIONS = (
+    {
+        'user_id': 3,
+        'first_date': '2019-02-01',
+        'first_service_id': 2,
+        'first_page_id': 9,
+        'first_page_time_spent': 5,
+        'fav_service_id': 2,
+        'fav_page_id': 8,
+        'max_page_time_spent': 12,
+        'time_spent': 50,
+        'sessions_cnt': 5,
+    },
+)
+
+
+def test_agg_reducer():
+    expected = EXPECTED_SESSIONS_FROM_VIEWS[0:1]
+    received = rs.agg_reducer(
+        RECS_EXAMPLE_VIEWS[0:3],
+        agg=AGG_SESSION_FROM_VIEWS,
+        skip_first_from_main=False,
+    )
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(0, received, expected)
+
+    expected = EXPECTED_SESSIONS_FROM_VIEWS[1:2]
+    received = rs.agg_reducer(
+        RECS_EXAMPLE_VIEWS[3:4],
+        agg=AGG_SESSION_FROM_VIEWS,
+        skip_first_from_main=False,
+    )
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(1, received, expected)
+
+    expected = EXPECTED_USER_FROM_SESSIONS
+    received = rs.agg_reducer(
+        RECS_EXAMPLE_SESSIONS[:],
+        agg=AGG_USER_FROM_SESSIONS,
+        skip_first_from_main=True,
+    )
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(2, received, expected)
+
+
+def test_sorted_reduce():
+    expected = EXPECTED_SESSIONS_FROM_VIEWS
+    received = rs.sorted_reduce(
+        RECS_EXAMPLE_VIEWS,
+        key=['user_id', 'date'],
+        reducer=lambda r: rs.agg_reducer(
+            r,
+            agg=AGG_SESSION_FROM_VIEWS,
+            skip_first_from_main=False,
+        ),
+    )
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(0, received, expected)
+
+    expected = EXPECTED_USER_FROM_SESSIONS
+    received = rs.sorted_reduce(
+        RECS_EXAMPLE_SESSIONS,
+        key='user_id',
+        reducer=lambda r: rs.agg_reducer(
+            r,
+            agg=AGG_USER_FROM_SESSIONS,
+            skip_first_from_main=True,
+        ),
+    )
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(1, received, expected)
+
+
+def test_sorted_groupby_aggregate():
+    expected = EXPECTED_SESSIONS_FROM_VIEWS
+    received = rs.sorted_groupby_aggregate(
+        RECS_EXAMPLE_VIEWS,
+        key=['user_id', 'date'],
+        agg=AGG_SESSION_FROM_VIEWS,
+        skip_first_from_main=False,
+    )
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(0, received, expected)
+
+    expected = EXPECTED_USER_FROM_SESSIONS
+    received = rs.sorted_groupby_aggregate(
+        RECS_EXAMPLE_SESSIONS,
+        key='user_id',
+        agg=AGG_USER_FROM_SESSIONS,
+        skip_first_from_main=True,
+    )
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(1, received, expected)
 
 
 def get_rising_synth_sample(date_cnt=5, shop_cnt=2, item_cnt=3, item2cat={0: 1, 1: 1, 2: 2}, k=10):
@@ -39,4 +186,7 @@ def test_add_rolling_features(verbose=True):
 
 
 if __name__ == '__main__':
+    test_agg_reducer()
+    test_sorted_groupby_aggregate()
+    test_sorted_reduce()
     test_add_rolling_features()
