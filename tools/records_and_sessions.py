@@ -26,7 +26,31 @@ SCHEME = (
 )
 
 
-def get_main_key(histogram, key_field_no=0, value_field_no=1):
+def initialize_histograms(agg):
+    measures = list()
+    dimensions = list()
+    fields_checked = list()
+    histograms = None
+    for field_out, agg_method, field_in in agg:
+        if agg_method == 'main':  # extract main value (frequency of statistical mode) from histogram
+            measures.append(field_in)
+        elif agg_method in ('dim', 'dimension', 'mode'):  # extract main key (statistical mode) from histogram
+            dimensions.append(field_in)
+        elif agg_method not in AVAILABLE_AGG_METHODS:
+            raise ValueError('Unknown aggregate method: {} (available: {})'.format(agg_method, AVAILABLE_AGG_METHODS))
+        if field_out in fields_checked:
+            raise ValueError('Output field name is repeated: {}'.format(field_out))
+        else:
+            fields_checked.append(field_out)
+    build_histogram = bool(measures)
+    if build_histogram:
+        assert dimensions, 'dimensions must be specified when main-aggregator is used'
+        histograms = [dict() for _ in measures]  # {dimensions: sum(main_measure), }
+    first_key, main_key = None, None
+    return [histograms, dimensions, measures, first_key, main_key]
+
+
+def get_main_key_from_histogram(histogram, key_field_no=0, value_field_no=1):
     main_key = max(
         histogram.items(),
         key=lambda a: a[value_field_no]
@@ -34,83 +58,97 @@ def get_main_key(histogram, key_field_no=0, value_field_no=1):
     return main_key
 
 
-def agg_reducer(
-        records,  # provided records must be from one key
-        agg=AGG_EXAMPLE,  # aggregators config as list of tuples: (field_out, agg_method, field_in)
-        skip_first_from_main=False,
-        fillna=None,
-):
-    hist_measures = list()
-    hist_dimensions = list()
-    fields_checked = list()
-    for field_out, agg_method, field_in in agg:
-        if agg_method == 'main':  # extract main value (frequency of statistical mode) from histogram
-            hist_measures.append(field_in)
-        elif agg_method in ('dim', 'dimension', 'mode'):  # extract main key (statistical mode) from histogram
-            hist_dimensions.append(field_in)
-        elif agg_method not in AVAILABLE_AGG_METHODS:
-            raise ValueError('Unknown aggregate method: {} (available: {})'.format(agg_method, AVAILABLE_AGG_METHODS))
-        if field_out in fields_checked:
-            raise ValueError('Output field name is repeated: {}'.format(field_out))
+def get_current_key_from_record(record, dimensions):
+    return tuple(
+        [record.get(d) for d in dimensions]
+    )
+
+
+def increment_histograms(record, histograms, dimensions, measures, inplace=True):
+    if inplace:
+        hist_dicts = histograms
+    else:
+        hist_dicts = histograms.copy()
+    cur_hist_key = get_current_key_from_record(record, dimensions)
+    for n, m in enumerate(measures):
+        if m is None:
+            cur_increment = 1
         else:
-            fields_checked.append(field_out)
-    build_histogram = bool(hist_measures)
-    if build_histogram:
-        assert hist_dimensions, 'dimensions must be specified when main-aggregator is used'
-        first_hist_key = None
-    record_out = dict()  # {field_name: field_value, }
-    hist_dicts = [dict() for m in hist_measures]  # {dimensions: sum(main_measure), }
+            cur_increment = record.get(m, 0)
+        assert isinstance(
+            cur_increment, (int, float),
+        ), 'unsupported measure type for increment: {} (int of float needed), value={}'.format(
+            type(cur_increment), cur_increment,
+        )
+        histograms[n][cur_hist_key] = histograms[n].get(cur_hist_key, 0) + cur_increment
+    if not inplace:
+        return hist_dicts, cur_hist_key
+
+
+def update_aggregate(aggregated_record, source, field_description, fillna=None, inplace=True):
+    # source can be exact value or record as dict
+    field_out, agg_method, field_in = field_description
+    record_out = aggregated_record if inplace else aggregated_record.copy()
+    value_in = source.get(field_in) if isinstance(source, dict) else source
+    if (value_in is None) and (agg_method not in ('cnt', 'count')):
+        if fillna is not None:
+            value_in = fillna
+        else:
+            raise ValueError('{} value is None and fillna option not used'.format(field_in))
+    if agg_method == 'first':
+        if record_out.get(field_out) is None:
+            record_out[field_out] = value_in
+    elif agg_method == 'last':
+        record_out[field_out] = value_in
+    elif agg_method in ('sum', 'avg'):
+        record_out[field_out] = record_out.get(field_out, 0) + value_in
+    if not inplace:
+        return record_out
+
+
+def postprocess_aggregate(aggregated_record, field_description, records_count, histogram_objects, inplace=True):
+    record_out = aggregated_record if inplace else aggregated_record.copy()
+    field_out, agg_method, field_in = field_description
+    histograms, hist_dimensions, hist_measures, first_hist_key, main_hist_key = histogram_objects
+    if agg_method == 'avg':
+        record_out[field_out] = record_out.get(field_out, 0) / records_count
+    elif agg_method in ('count', 'cnt'):
+        record_out[field_out] = records_count
+    elif agg_method == 'main':
+        field_no = hist_measures.index(field_in)
+        record_out[field_out] = histograms[field_no][main_hist_key]
+    elif agg_method in ('dim', 'dimension', 'mode'):
+        field_no = hist_dimensions.index(field_in)
+        record_out[field_out] = main_hist_key[field_no]
+    elif agg_method == 'const':
+        record_out[field_out] = field_in
+    if not inplace:
+        return record_out
+
+
+def agg_reducer(records, agg=AGG_EXAMPLE, skip_first_from_main=False, fillna=None):
+    histogram_objects = initialize_histograms(agg)
+    histograms, hist_dimensions, hist_measures, first_hist_key, main_hist_key = histogram_objects
+    record_out = dict()
     records_count = 0
     for cur_record in records:
         records_count += 1
-        if build_histogram:
-            cur_hist_key = tuple([cur_record.get(d) for d in hist_dimensions])
-            first_hist_key = first_hist_key or cur_hist_key
-            for n, m in enumerate(hist_measures):
-                if m is None:
-                    hist_increment = 1
-                else:
-                    hist_increment = cur_record.get(m, 0)
-                assert isinstance(
-                    hist_increment, (int, float),
-                ), 'unsupported measure type: {} (int of float needed), value={}'.format(
-                    type(hist_increment), hist_increment,
-                )
-                hist_dicts[n][cur_hist_key] = hist_dicts[n].get(cur_hist_key, 0) + hist_increment
-        for field_out, agg_method, field_in in agg:
-            value_in = cur_record.get(field_in)
-            if (value_in is None) and (agg_method not in ('cnt', 'count')):
-                if fillna is not None:
-                    value_in = fillna
-                else:
-                    raise ValueError('{} value is None and fillna option not used'.format(field_in))
-            if agg_method == 'first':
-                if record_out.get(field_out) is None:
-                    record_out[field_out] = value_in
-            elif agg_method == 'last':
-                record_out[field_out] = value_in
-            elif agg_method in ('sum', 'avg'):
-                record_out[field_out] = record_out.get(field_out, 0) + value_in
-    if records_count > 0:
-        if build_histogram:
-            if skip_first_from_main and len(hist_dicts[0]) > 1:
+        if histograms:
+            increment_histograms(cur_record, histograms, hist_dimensions, hist_measures, inplace=True)
+            first_hist_key = first_hist_key or get_current_key_from_record(cur_record, hist_dimensions)
+        for field_description in agg:
+            update_aggregate(record_out, cur_record, field_description, fillna, inplace=True)
+    if records_count:
+        if histograms:
+            if skip_first_from_main and len(histograms[0]) > 1:
                 for n, m in enumerate(hist_measures):
-                    hist_dicts[n][first_hist_key] = 0
+                    histograms[n][first_hist_key] = 0
             main_measure_no = 0
-            main_hist_key = get_main_key(hist_dicts[main_measure_no])
-        for field_out, agg_method, field_in in agg:
-            if agg_method == 'avg':
-                record_out[field_out] = record_out.get(field_out, 0) / records_count
-            elif agg_method in ('count', 'cnt'):
-                record_out[field_out] = records_count
-            elif agg_method == 'main':
-                field_no = hist_measures.index(field_in)
-                record_out[field_out] = hist_dicts[field_no][main_hist_key]
-            elif agg_method in ('dim', 'dimension', 'mode'):
-                field_no = hist_dimensions.index(field_in)
-                record_out[field_out] = main_hist_key[field_no]
-            elif agg_method == 'const':
-                record_out[field_out] = field_in
+            main_object_no = 4
+            main_hist_key = get_main_key_from_histogram(histograms[main_measure_no])
+            histogram_objects[main_object_no] = main_hist_key
+        for field_description in agg:
+            postprocess_aggregate(record_out, field_description, records_count, histogram_objects)
     return [record_out]
 
 
