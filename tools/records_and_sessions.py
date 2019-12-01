@@ -1,5 +1,10 @@
 import pandas as pd
 
+try:  # Assume we're a sub-module in a package.
+    from . import process_csv as pcsv
+except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
+    import process_csv as pcsv
+
 
 AVAILABLE_AGG_METHODS = (
     'first', 'last',
@@ -150,6 +155,37 @@ def agg_reducer(records, agg=AGG_EXAMPLE, skip_first_from_main=False, fillna=Non
         for field_description in agg:
             postprocess_aggregate(record_out, field_description, records_count, histogram_objects)
     return [record_out]
+
+
+def enumerate_sessions_reducer(
+        records,
+        time_field='timestamp', time_format='int',
+        timeout=30*60, timebound=1*60*60,
+        session_id_field='session_no',
+):
+    start_time = None
+    prev_time = None
+    timebound_exceeded = False
+    session_no = 0
+    for record_in in records:
+        record_out = record_in.copy()
+        cur_time = record_in.get(time_field)
+        if time_format not in ('int', int, 'float', float, 'timestamp', 'ts'):
+            cur_time = pcsv.string_to_date(cur_time, time_format)
+        if start_time is None:
+            start_time = cur_time
+        if prev_time is None:
+            prev_time = cur_time
+        if cur_time - start_time > timebound:
+            timebound_exceeded = True
+        if cur_time - prev_time >= timeout:
+            session_no += 1
+            start_time = cur_time
+            timebound_exceeded = False
+        if not timebound_exceeded:
+            record_out[session_id_field] = session_no
+        prev_time = cur_time
+        yield record_out
 
 
 def add_last_dummy_record(records, key=DEFAULT_KEY_FIELDS, dummy_value=None):

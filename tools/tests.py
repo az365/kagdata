@@ -153,6 +153,31 @@ def test_sorted_groupby_aggregate():
     assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(1, received, expected)
 
 
+def test_enumerate_sessions_reducer():
+    events = [
+        {'user_id': 999, 'timestamp': 1500000000, 'dt': '2017-07-14 02:40:00', 'expected_s_no': 0},
+        {'user_id': 999, 'timestamp': 1500000600, 'dt': '2017-07-14 02:50:00', 'expected_s_no': 0},
+        {'user_id': 999, 'timestamp': 1500001200, 'dt': '2017-07-14 03:00:00', 'expected_s_no': 0},
+        {'user_id': 999, 'timestamp': 1500003600, 'dt': '2017-07-14 03:40:00', 'expected_s_no': 1},
+        {'user_id': 999, 'timestamp': 1500004200, 'dt': '2017-07-14 03:50:00', 'expected_s_no': 1},
+        {'user_id': 999, 'timestamp': 1500005400, 'dt': '2017-07-14 04:10:00', 'expected_s_no': 1},
+        {'user_id': 999, 'timestamp': 1500006600, 'dt': '2017-07-14 04:30:00', 'expected_s_no': 1},
+        {'user_id': 999, 'timestamp': 1500007800, 'dt': '2017-07-14 04:50:00', 'expected_s_no': None},
+        {'user_id': 999, 'timestamp': 1500010200, 'dt': '2017-07-14 05:30:00', 'expected_s_no': 2},
+    ]
+    result = list(
+        rs.enumerate_sessions_reducer(
+            events,
+            time_field='timestamp', time_format='int',
+            timeout=30 * 60, timebound=1 * 60 * 60,
+            session_id_field='received_s_no',
+        )
+    )
+    expected = [i.get('expected_s_no') for i in events]
+    received = [i.get('received_s_no') for i in result]
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(0, received, expected)
+
+
 def get_rising_synth_sample(date_cnt=5, shop_cnt=2, item_cnt=3, item2cat={0: 1, 1: 1, 2: 2}, k=10):
     def get_rising_synth_data(date_cnt, shop_cnt, item_cnt, item2cat, k):
         for cur_date in range(date_cnt):
@@ -189,4 +214,5 @@ if __name__ == '__main__':
     test_agg_reducer()
     test_sorted_groupby_aggregate()
     test_sorted_reduce()
+    test_enumerate_sessions_reducer()
     test_add_rolling_features()
