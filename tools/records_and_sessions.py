@@ -170,11 +170,12 @@ def enumerate_sessions_reducer(
         time_field='timestamp', time_format='int',
         timeout=30*60, timebound=1*60*60,
         session_id_field='session_no',
+        first_session_no=1,
 ):
     start_time = None
     prev_time = None
     timebound_exceeded = False
-    session_no = 0
+    session_no = first_session_no
     for record_in in records:
         record_out = record_in.copy()
         cur_time = record_in.get(time_field)
@@ -229,6 +230,7 @@ def sorted_groupby_aggregate(records, key=DEFAULT_KEY_FIELDS, agg=AGG_EXAMPLE, s
             r,
             agg=agg,
             skip_first_from_main=skip_first_from_main,
+            fillna=0,
         ),
     ):
         yield cur_record
@@ -237,9 +239,9 @@ def sorted_groupby_aggregate(records, key=DEFAULT_KEY_FIELDS, agg=AGG_EXAMPLE, s
 def get_records_from_reader(reader, scheme=SCHEME, skip_first_row=True, max_n=None, expected_n=None, step_n=10000):
     records_count = max_n if (max_n or 0) > (expected_n or 0) else expected_n
     for n, row in enumerate(reader):
-        if records_count > 0:
+        if records_count:
             if (n % step_n == 0) or (n >= records_count):
-                print('{}% ({}/{}) lines processed'.format(100 * n / records_count, n, records_count), end='\r')
+                print('{}% ({}/{}) lines processed'.format(int(100 * n / records_count), n, records_count), end='\r')
             if max_n and n >= max_n:
                 break
         if skip_first_row and n == 0:
@@ -262,6 +264,6 @@ def get_dataframe_from_records(records, columns=None):
         if not columns:
             columns = r.keys()
         rows.append(
-            [r[c] for c in columns]
+            [r.get(c) for c in columns]
         )
     return pd.DataFrame(rows, columns=columns)
