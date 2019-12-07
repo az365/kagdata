@@ -157,6 +157,14 @@ def agg_reducer(records, agg=AGG_EXAMPLE, skip_first_from_main=False, fillna=Non
     return [record_out]
 
 
+def sort_records(records, by):
+    sorted_records = sorted(
+        list(records),
+        key=lambda r: r.get(by)
+    )
+    return sorted_records
+
+
 def enumerate_sessions_reducer(
         records,
         time_field='timestamp', time_format='int',
