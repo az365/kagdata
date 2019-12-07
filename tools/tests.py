@@ -1,4 +1,5 @@
 import pandas as pd
+import datetime as dt
 
 try:  # Assume we're a sub-module in a package.
     from . import feature_engineering as fe
@@ -176,6 +177,18 @@ def test_enumerate_sessions_reducer():
     expected = [i.get('expected_s_no') for i in events]
     received = [i.get('received_s_no') for i in result]
     assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(0, received, expected)
+
+    result = list(
+        rs.enumerate_sessions_reducer(
+            events,
+            time_field='dt', time_format='iso',
+            timeout=dt.timedelta(minutes=30), timebound=dt.timedelta(hours=1),
+            session_id_field='received_s_no',
+        )
+    )
+    expected = [i.get('expected_s_no') for i in events]
+    received = [i.get('received_s_no') for i in result]
+    assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(1, received, expected)
 
 
 def get_rising_synth_sample(date_cnt=5, shop_cnt=2, item_cnt=3, item2cat={0: 1, 1: 1, 2: 2}, k=10):
