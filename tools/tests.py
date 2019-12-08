@@ -247,6 +247,25 @@ def test_add_bin_fields():
     assert received == expected, 'test case {}, received {} instead of {}'.format(0, received, expected)
 
 
+def test_add_secondary_fields():
+    secondary_measures = [
+        ('SpU', lambda s, u: s / u, 'sessions', 'users'),
+        ('RpS', lambda r, s: r / s, 'requests', 'sessions'),
+        ('rows', lambda: 1),
+        ('lines', lambda a: 1, '*'),
+    ]
+    test_records = [
+        {'requests': 10, 'sessions': 5, 'users': 2},
+        {'requests': 30, 'sessions': 12, 'users': 3},
+    ]
+    received = list(rs.add_secondary_fields(test_records, secondary_measures))
+    expected = [
+        {'requests': 10, 'sessions': 5, 'users': 2, 'SpU': 2.5, 'RpS': 2.0, 'rows': 1, 'lines': 1},
+        {'requests': 30, 'sessions': 12, 'users': 3, 'SpU': 4.0, 'RpS': 2.5, 'rows': 1, 'lines': 1},
+    ]
+    assert received == expected, 'test case {}, received {} instead of {}'.format(0, received, expected)
+
+
 def get_rising_synth_sample(date_cnt=5, shop_cnt=2, item_cnt=3, item2cat={0: 1, 1: 1, 2: 2}, k=10):
     def get_rising_synth_data(date_cnt, shop_cnt, item_cnt, item2cat, k):
         for cur_date in range(date_cnt):

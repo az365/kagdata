@@ -161,6 +161,24 @@ def add_bin_fields(records, fields_for_bins=('time_spent', 'clicks_cnt'), bounds
         yield r
 
 
+def extract_secondary_value(record, function, *input_fields):
+    input_values = list()
+    for cur_field in input_fields:
+        input_values.append(
+            record.get(cur_field)
+        )
+    return function(*input_values)
+
+
+def add_secondary_fields(records, extractors):
+    for r in records:
+        for e in extractors:
+            field_out, function = e[:2]
+            fields_in = e[2:]
+            r[field_out] = extract_secondary_value(r, function, *fields_in)
+        yield r
+
+
 def sort_records(records, by):
     sorted_records = sorted(
         list(records),
