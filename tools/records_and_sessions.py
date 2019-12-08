@@ -277,22 +277,25 @@ def sorted_groupby_aggregate(records, key=DEFAULT_KEY_FIELDS, agg=AGG_EXAMPLE, s
         yield cur_record
 
 
-def reduce_sessions(records, session_config=SESSION_CONFIG, agg=AGG_EXAMPLE, agg_nonfirst=None):
+def reduce_sessions(records, session_config=SESSION_CONFIG, agg_or_reducer=AGG_EXAMPLE):
     # input records must be from one user
     time_field = session_config.get('time_field', TIME_FIELD)
     session_field = session_config.get('session_field', SESSION_FIELD)
     sorted_records = sort_records(records, by=time_field)
     marked_records = enumerate_sessions(sorted_records, **session_config)
-    session_records = sorted_groupby_aggregate(
-        marked_records, key=session_field,
-        agg=agg, skip_first_from_main=False,
-    )
-    if agg_nonfirst:
-        session_records = sorted_groupby_aggregate(
+    if isinstance(agg_or_reducer, (set, list, tuple)):
+        aggregation_config = agg_or_reducer
+        sessions = sorted_groupby_aggregate(
             marked_records, key=session_field,
-            agg=agg_nonfirst, skip_first_from_main=True,
+            agg=aggregation_config, skip_first_from_main=False,
         )
-    return session_records
+    else:
+        process_session_reducer = agg_or_reducer
+        sessions = sorted_reduce(
+            marked_records, key=session_field,
+            reducer=process_session_reducer,
+        )
+    return sessions
 
 
 def get_records_from_reader(reader, scheme=SCHEME, skip_first_row=True, max_n=None, expected_n=None, step_n=10000):
