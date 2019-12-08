@@ -31,6 +31,11 @@ SCHEME = (
     ('time_spent', 'float'),
     ('clicks_cnt', 'int'),
 )
+TIME_FIELD = 'timestamp'
+TIME_FORMAT = 'int'
+SESSION_FIELD = 'session_no'
+SESSION_TIMEOUT = 30 * 60
+SESSION_TIMEBOUND = 1 * 60 * 60
 
 
 def initialize_histograms(agg):
@@ -181,12 +186,13 @@ def agg_reducer(records, agg=AGG_EXAMPLE, skip_first_from_main=False, fillna=Non
     return [record_out]
 
 
-def enumerate_sessions_reducer(
+def enumerate_sessions(
         records,
-        time_field='timestamp', time_format='int',
-        timeout=30*60, timebound=1*60*60,
-        session_id_field='session_no',
+        time_field=TIME_FIELD, time_format=TIME_FORMAT,
+        timeout=SESSION_TIMEOUT, timebound=SESSION_TIMEBOUND,
+        session_field=SESSION_FIELD,
         first_session_no=1,
+        event_timeout_field='event_timeout',
 ):
     start_time = None
     prev_time = None
@@ -201,14 +207,18 @@ def enumerate_sessions_reducer(
             start_time = cur_time
         if prev_time is None:
             prev_time = cur_time
-        if cur_time - start_time > timebound:
+        cur_timelen = cur_time - start_time
+        cur_timeout = cur_time - prev_time
+        if cur_timelen > timebound:
             timebound_exceeded = True
-        if cur_time - prev_time >= timeout:
+        if cur_timeout >= timeout:
             session_no += 1
             start_time = cur_time
             timebound_exceeded = False
         if not timebound_exceeded:
-            record_out[session_id_field] = session_no
+            record_out[session_field] = session_no
+        if event_timeout_field:
+            record_out[event_timeout_field] = cur_timeout
         prev_time = cur_time
         yield record_out
 

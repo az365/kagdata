@@ -156,7 +156,7 @@ def test_sorted_groupby_aggregate():
     assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(1, received, expected)
 
 
-def test_enumerate_sessions_reducer():
+def test_enumerate_sessions():
     events = [
         {'user_id': 999, 'timestamp': 1500000000, 'dt': '2017-07-14 02:40:00', 'expected_s_no': 1},
         {'user_id': 999, 'timestamp': 1500000600, 'dt': '2017-07-14 02:50:00', 'expected_s_no': 1},
@@ -169,11 +169,11 @@ def test_enumerate_sessions_reducer():
         {'user_id': 999, 'timestamp': 1500010200, 'dt': '2017-07-14 05:30:00', 'expected_s_no': 3},
     ]
     result = list(
-        rs.enumerate_sessions_reducer(
+        rs.enumerate_sessions(
             events,
             time_field='timestamp', time_format='int',
             timeout=30 * 60, timebound=1 * 60 * 60,
-            session_id_field='received_s_no',
+            session_field='received_s_no',
         )
     )
     expected = [i.get('expected_s_no') for i in events]
@@ -181,11 +181,11 @@ def test_enumerate_sessions_reducer():
     assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(0, received, expected)
 
     result = list(
-        rs.enumerate_sessions_reducer(
+        rs.enumerate_sessions(
             events,
             time_field='dt', time_format='iso',
             timeout=dt.timedelta(minutes=30), timebound=dt.timedelta(hours=1),
-            session_id_field='received_s_no',
+            session_field='received_s_no',
         )
     )
     expected = [i.get('expected_s_no') for i in events]
@@ -256,7 +256,7 @@ if __name__ == '__main__':
     test_agg_reducer()
     test_sorted_groupby_aggregate()
     test_sorted_reduce()
-    test_enumerate_sessions_reducer()
+    test_enumerate_sessions()
     test_get_bin_by_value()
     test_add_bin_fields()
     test_add_rolling_features()
