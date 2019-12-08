@@ -29,6 +29,22 @@ def get_csv_rows(filename, encoding, delimiter, gz=False):
     return fileholder, reader
 
 
+def read_several_files(prefix, suffix, batch_names, file_template, delimiter=None, skip_first_line=False, verbose=True):
+    is_first_row = True
+    for batch_name in batch_names:
+        filename = file_template.format(prefix, batch_name, suffix)
+        if verbose:
+            print('Reading file:', filename)
+        fileholder = open(filename, 'r')
+        reader = csv.reader(fileholder, delimiter=delimiter) if delimiter else csv.reader(fileholder)
+        for row in reader:
+            if skip_first_line and is_first_row:
+                is_first_row = False
+                continue
+            yield row
+        fileholder.close()
+
+
 def form_dataframe(fields_and_value_lists):
     columns = [i[0] for i in fields_and_value_lists]
     dict_values = {k: v for k, v in fields_and_value_lists}
@@ -91,7 +107,6 @@ def item_reduce(
         item,
         reducer_function, init_function=lambda a: a,
         args_as_list=True,
-        test1=None,
 ):
     accumulative_value_for_item = dict_accumulative_values.get(
         item,
