@@ -2,8 +2,10 @@ import pandas as pd
 
 try:  # Assume we're a sub-module in a package.
     from . import process_csv as pcsv
+    from . import eda_tools as eda
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
     import process_csv as pcsv
+    import eda_tools as eda
 
 
 AVAILABLE_AGG_METHODS = (
@@ -131,6 +133,28 @@ def postprocess_aggregate(aggregated_record, field_description, records_count, h
         return record_out
 
 
+def add_bin_fields(records, fields_for_bins=('time_spent', 'clicks_cnt'), bounds=eda.DEFAULT_BOUNDS, fillna=0):
+    for r in records:
+        for field_in in fields_for_bins:
+            field_bin = '{}_bin'.format(field_in)
+            field_bound = '{}_bound'.format(field_in)
+            value_in = r.get(field_in, fillna)
+            r[field_bin], r[field_bound] = eda.get_bin_by_value(
+                value_in,
+                bounds,
+                output_bound=True,
+            )
+        yield r
+
+
+def sort_records(records, by):
+    sorted_records = sorted(
+        list(records),
+        key=lambda r: r.get(by)
+    )
+    return sorted_records
+
+
 def agg_reducer(records, agg=AGG_EXAMPLE, skip_first_from_main=False, fillna=None):
     histogram_objects = initialize_histograms(agg)
     histograms, hist_dimensions, hist_measures, first_hist_key, main_hist_key = histogram_objects
@@ -155,14 +179,6 @@ def agg_reducer(records, agg=AGG_EXAMPLE, skip_first_from_main=False, fillna=Non
         for field_description in agg:
             postprocess_aggregate(record_out, field_description, records_count, histogram_objects)
     return [record_out]
-
-
-def sort_records(records, by):
-    sorted_records = sorted(
-        list(records),
-        key=lambda r: r.get(by)
-    )
-    return sorted_records
 
 
 def enumerate_sessions_reducer(

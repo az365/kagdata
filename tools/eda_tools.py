@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+DEFAULT_BOUNDS = (0, 1, 10, 100, 1000, 10000, 100000)
+
+
 def get_aggregate(data, dimensions, measures=('cnt', 'revenue'), aggregator='sum', relation_field='price', add_x=-1):
     result = data.groupby(
         dimensions, 
@@ -105,6 +108,36 @@ def crop_value(x, min_value=0, max_value=20):
         return x
     else:
         return min_value
+
+
+def get_bin_by_value(value, bounds=DEFAULT_BOUNDS, bin_format='{:03}: {}', output_bound=False):
+    bounds_cnt = len(bounds)
+    assert bounds_cnt, 'bounds must be non-empty and sorted'
+    bin_no = bounds_cnt + 1
+    for cur_no, cur_value in enumerate(bounds):
+        if value < cur_value:
+            bin_no = cur_no
+            break
+    if bin_format or output_bound:
+        if bin_no == 0:
+            left_bound, right_bound = None, bounds[0]
+        elif bin_no > bounds_cnt:
+            left_bound, right_bound = bounds[-1], None
+        else:
+            left_bound, right_bound = bounds[bin_no - 1], bounds[bin_no]
+    if bin_format:
+        if left_bound is None:
+            interval_name = '{}-'.format(right_bound)
+        elif right_bound is None:
+            interval_name = '{}+'.format(left_bound)
+        else:
+            interval_name = '{}..{}'.format(left_bound, right_bound)
+        result = bin_format.format(bin_no, interval_name)
+    else:
+        result = bin_no
+    if output_bound:
+        result = result, left_bound
+    return result
 
 
 def plot_single(

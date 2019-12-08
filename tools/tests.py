@@ -2,9 +2,11 @@ import pandas as pd
 import datetime as dt
 
 try:  # Assume we're a sub-module in a package.
+    from . import eda_tools as eda
     from . import feature_engineering as fe
     from . import records_and_sessions as rs
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
+    import eda_tools as eda
     import feature_engineering as fe
     import records_and_sessions as rs
 
@@ -191,6 +193,33 @@ def test_enumerate_sessions_reducer():
     assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(1, received, expected)
 
 
+def test_get_bin_by_value():
+    list_bounds = (0, 100, 1000, 10000, 100000)
+    values_and_bounds = (
+        (-5, '000: 0-', None),
+        (50, '001: 0..100', 0),
+        (500, '002: 100..1000', 100),
+        (50000, '004: 10000..100000', 10000),
+        (100500, '006: 100000+', 100000),
+    )
+    for n, (value, interval_name, bound) in enumerate(values_and_bounds):
+        received = eda.get_bin_by_value(value, list_bounds, '{:03}: {}', True)
+        expected = (interval_name, bound)
+        assert received == expected, 'test case {}, received {} instead of {}'.format(n, received, expected)
+
+
+def test_add_bin_fields():
+    list_bounds = (0, 5, 10, 50, 100)
+    fields_to_bin = ('clicks_cnt', 'time_spent')
+    processed_records = rs.add_bin_fields(RECS_EXAMPLE_VIEWS, fields_to_bin, list_bounds)
+    received = [
+        [r.get('{}_bound'.format(f)) for f in fields_to_bin]
+        for r in processed_records
+    ]
+    expected = [[5, 5], [0, 0], [0, 0], [5, 100]]
+    assert received == expected, 'test case {}, received {} instead of {}'.format(0, received, expected)
+
+
 def get_rising_synth_sample(date_cnt=5, shop_cnt=2, item_cnt=3, item2cat={0: 1, 1: 1, 2: 2}, k=10):
     def get_rising_synth_data(date_cnt, shop_cnt, item_cnt, item2cat, k):
         for cur_date in range(date_cnt):
@@ -228,4 +257,6 @@ if __name__ == '__main__':
     test_sorted_groupby_aggregate()
     test_sorted_reduce()
     test_enumerate_sessions_reducer()
+    test_get_bin_by_value()
+    test_add_bin_fields()
     test_add_rolling_features()
