@@ -193,6 +193,33 @@ def test_enumerate_sessions():
     assert list(received) == list(expected), 'test case {}, received {} instead of {}'.format(1, received, expected)
 
 
+def test_reduce_session():
+    # events = [
+    #     {'user_id': 999, 'timestamp': 1500000000, 'dt': '2017-07-14 02:40:00', 'expected_s_no': 1},
+    #     {'user_id': 999, 'timestamp': 1500000600, 'dt': '2017-07-14 02:50:00', 'expected_s_no': 1},
+    #     {'user_id': 999, 'timestamp': 1500001200, 'dt': '2017-07-14 03:00:00', 'expected_s_no': 1},
+    #     {'user_id': 999, 'timestamp': 1500003600, 'dt': '2017-07-14 03:40:00', 'expected_s_no': 2},
+    #     {'user_id': 999, 'timestamp': 1500004200, 'dt': '2017-07-14 03:50:00', 'expected_s_no': 2},
+    #     {'user_id': 999, 'timestamp': 1500005400, 'dt': '2017-07-14 04:10:00', 'expected_s_no': 2},
+    #     {'user_id': 999, 'timestamp': 1500006600, 'dt': '2017-07-14 04:30:00', 'expected_s_no': 2},
+    #     {'user_id': 999, 'timestamp': 1500007800, 'dt': '2017-07-14 04:50:00', 'expected_s_no': None},
+    #     {'user_id': 999, 'timestamp': 1500010200, 'dt': '2017-07-14 05:30:00', 'expected_s_no': 3},
+    # ]
+    # received = rs.reduce_sessions(events, SESSION_CONFIG, AGG_SESSION_FROM_EVENTS)
+    session_config_for_views = {
+        'time_field': 'date',
+        'time_format': 'iso',
+        'timeout': dt.timedelta(days=1),
+        'timebound': dt.timedelta(days=1),
+        'session_field': 'session_no',
+        'first_session_no': 1,
+        'event_timeout_field': 'event_timeout',
+    }
+    received = list(rs.reduce_sessions(RECS_EXAMPLE_VIEWS, session_config_for_views, AGG_SESSION_FROM_VIEWS))
+    expected = list(EXPECTED_SESSIONS_FROM_VIEWS)
+    assert received == expected, 'test case {}, received {} instead of {}'.format(0, received, expected)
+
+
 def test_get_bin_by_value():
     list_bounds = (0, 100, 1000, 10000, 100000)
     values_and_bounds = (
@@ -257,6 +284,7 @@ if __name__ == '__main__':
     test_sorted_groupby_aggregate()
     test_sorted_reduce()
     test_enumerate_sessions()
+    test_reduce_session()
     test_get_bin_by_value()
     test_add_bin_fields()
     test_add_rolling_features()

@@ -36,6 +36,15 @@ TIME_FORMAT = 'int'
 SESSION_FIELD = 'session_no'
 SESSION_TIMEOUT = 30 * 60
 SESSION_TIMEBOUND = 1 * 60 * 60
+SESSION_CONFIG = {
+    'time_field': TIME_FIELD,
+    'time_format': TIME_FORMAT,
+    'timeout': SESSION_TIMEOUT,
+    'timebound': SESSION_TIMEBOUND,
+    'session_field': SESSION_FIELD,
+    'first_session_no': 1,
+    'event_timeout_field': 'event_timeout',
+}
 
 
 def initialize_histograms(agg):
@@ -248,6 +257,12 @@ def sorted_reduce(records, key=DEFAULT_KEY_FIELDS, reducer=agg_reducer):
         records_group.append(cur_record)
 
 
+def reduce(records, key=DEFAULT_KEY_FIELDS, reducer=agg_reducer):
+    sorted_records = sort_records(records, by=key)
+    processed_records = sorted_reduce(sorted_records, key, reducer)
+    return processed_records
+
+
 def sorted_groupby_aggregate(records, key=DEFAULT_KEY_FIELDS, agg=AGG_EXAMPLE, skip_first_from_main=False):
     for cur_record in sorted_reduce(
         records,
@@ -260,6 +275,24 @@ def sorted_groupby_aggregate(records, key=DEFAULT_KEY_FIELDS, agg=AGG_EXAMPLE, s
         ),
     ):
         yield cur_record
+
+
+def reduce_sessions(records, session_config=SESSION_CONFIG, agg=AGG_EXAMPLE, agg_nonfirst=None):
+    # input records must be from one user
+    time_field = session_config.get('time_field', TIME_FIELD)
+    session_field = session_config.get('session_field', SESSION_FIELD)
+    sorted_records = sort_records(records, by=time_field)
+    marked_records = enumerate_sessions(sorted_records, **session_config)
+    session_records = sorted_groupby_aggregate(
+        marked_records, key=session_field,
+        agg=agg, skip_first_from_main=False,
+    )
+    if agg_nonfirst:
+        session_records = sorted_groupby_aggregate(
+            marked_records, key=session_field,
+            agg=agg_nonfirst, skip_first_from_main=True,
+        )
+    return session_records
 
 
 def get_records_from_reader(reader, scheme=SCHEME, skip_first_row=True, max_n=None, expected_n=None, step_n=10000):
