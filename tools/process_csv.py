@@ -30,12 +30,12 @@ def get_csv_rows(filename, encoding, delimiter, gz=False):
 
 
 def read_several_files(prefix, suffix, batch_names, file_template, delimiter=None, skip_first_line=False, verbose=True):
-    is_first_row = True
     for batch_name in batch_names:
         filename = file_template.format(prefix, batch_name, suffix)
         if verbose:
             print('Reading file:', filename)
         fileholder = open(filename, 'r')
+        is_first_row = True
         reader = csv.reader(fileholder, delimiter=delimiter) if delimiter else csv.reader(fileholder)
         for row in reader:
             if skip_first_line and is_first_row:
