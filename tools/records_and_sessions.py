@@ -180,10 +180,16 @@ def add_secondary_fields(records, extractors):
 
 
 def sort_records(records, by):
-    sorted_records = sorted(
-        list(records),
-        key=lambda r: r.get(by)
-    )
+    if isinstance(by, (set, list, tuple)):
+        sorted_records = sorted(
+            list(records),
+            key=lambda r: [r.get(f) for f in by]
+        )
+    else:
+        sorted_records = sorted(
+            list(records),
+            key=lambda r: r.get(by)
+        )
     return sorted_records
 
 
