@@ -180,6 +180,33 @@ def add_secondary_fields(records, extractors):
         yield r
 
 
+def filter_records_by_function(records, function, *fields):
+    for r in records:
+        take_this = extract_secondary_value(r, function, *fields)
+        if take_this:
+            yield r
+
+
+def filter_records_by_values(records, fields, list_values):
+    for r in records:
+        if isinstance(fields, str):
+            value = r.get(fields)
+        else:
+            value = [r.get(f) for f in fields]
+        take_this = value in list_values
+        if take_this:
+            yield r
+
+
+def apply_dict(records, field_in, field_out, dict_to_apply, default_value=None):
+    for r in records:
+        value_in = r.get(field_in)
+        value_out = dict_to_apply.get(value_in, default_value)
+        if value_out:
+            r[field_out] = value_out
+            yield r
+
+
 def sort_records(records, by):
     if isinstance(by, (set, list, tuple)):
         sorted_records = sorted(
