@@ -357,6 +357,32 @@ def reduce_sessions(records, session_config=SESSION_CONFIG, agg_or_reducer=AGG_E
     return sessions
 
 
+def get_composite_key(record, fields):
+    if isinstance(fields, (str, int, float, bool)):
+        list_fields = [fields]
+    elif isinstance(fields, (set, list, tuple)):
+        list_fields = fields
+    else:
+        raise ValueError('unsupported argument type: {} instead of str, list, ...'.format(type(fields)))
+    list_values = [record.get(f) for f in list_fields]
+    return tuple(list_values)
+
+
+def map_side_join(left, right, by, filter_left_by_right=False):
+    # by-argument can be one field or list of fields
+    if isinstance(right, dict):
+        dict_right = right
+    else:
+        dict_right = {get_composite_key(r, by): r for r in right}
+    for r in left:
+        key = get_composite_key(r, by)
+        right_part = dict_right.get(key)
+        if right_part:
+            r.update(right_part)
+        if right_part or not filter_left_by_right:
+            yield r
+
+
 def get_records_from_reader(reader, scheme=SCHEME, skip_first_row=True, max_n=None, expected_n=None, step_n=10000):
     records_count = max_n if (max_n or 0) > (expected_n or 0) else expected_n
     for n, row in enumerate(reader):
