@@ -33,6 +33,7 @@ SCHEME = (
 )
 TIME_FIELD = 'timestamp'
 TIME_FORMAT = 'int'
+EVENT_FIELD = 'event_no'
 SESSION_FIELD = 'session_no'
 SESSION_TIMEOUT = 30 * 60
 SESSION_TIMEBOUND = 1 * 60 * 60
@@ -225,12 +226,15 @@ def enumerate_sessions(
         timeout=SESSION_TIMEOUT, timebound=SESSION_TIMEBOUND,
         session_field=SESSION_FIELD,
         first_session_no=1,
+        event_field=EVENT_FIELD,
+        first_event_no=1,
         event_timeout_field='event_timeout',
 ):
     start_time = None
     prev_time = None
     timebound_exceeded = False
     session_no = first_session_no
+    event_no = first_event_no
     for record_in in records:
         record_out = record_in.copy()
         cur_time = record_in.get(time_field)
@@ -246,12 +250,15 @@ def enumerate_sessions(
             timebound_exceeded = True
         if cur_timeout >= timeout:
             session_no += 1
+            event_no = first_event_no
             start_time = cur_time
             timebound_exceeded = False
         if not timebound_exceeded:
             record_out[session_field] = session_no
+            record_out[event_field] = event_no
         if event_timeout_field:
             record_out[event_timeout_field] = cur_timeout
+        event_no += 1
         prev_time = cur_time
         yield record_out
 
@@ -268,11 +275,12 @@ def sorted_reduce(records, key=DEFAULT_KEY_FIELDS, reducer=agg_reducer):
     # input records must be sorted by key
     key_fields = [key] if isinstance(key, str) else key
     records_group = list()
-    prev_key = None
+    is_first_record = True
     for n, cur_record in enumerate(add_last_dummy_record(records, key)):
         cur_key = [cur_record.get(f) for f in key_fields]
-        if prev_key is None:
+        if is_first_record:
             prev_key = cur_key
+            is_first_record = False
         if prev_key != cur_key:
             for record_out in reducer(records_group):
                 yield record_out
