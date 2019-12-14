@@ -29,12 +29,20 @@ def get_csv_rows(filename, encoding, delimiter, gz=False):
     return fileholder, reader
 
 
-def read_several_files(prefix, suffix, batch_names, file_template, delimiter=None, skip_first_line=False, verbose=True):
+def read_several_files(
+        prefix, suffix, batch_names, file_template,
+        encoding=None,
+        delimiter=None, skip_first_line=False,
+        verbose=True,
+):
     for batch_name in batch_names:
         filename = file_template.format(prefix, batch_name, suffix)
         if verbose:
-            print('Reading file:', filename)
-        fileholder = open(filename, 'r')
+            print(verbose if isinstance(verbose, str) else 'Reading file:', filename)
+        if encoding:
+            fileholder = open(filename, 'r', encoding=encoding)
+        else:
+            fileholder = open(filename, 'r')
         is_first_row = True
         reader = csv.reader(fileholder, delimiter=delimiter) if delimiter else csv.reader(fileholder)
         for row in reader:
