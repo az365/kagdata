@@ -1,3 +1,4 @@
+from enum import Enum
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -160,6 +161,20 @@ def get_cum_sum_for_stackplot(dataframe, x_field, y_field, cat_field, reverse_ca
     return dataframe
 
 
+def get_subplot_title(dataframe, x_range_field, y_range_field, title):
+    if title:
+        title_blocks = list()
+        if title != 'auto':
+            title_blocks.append(title)
+        if y_range_field:
+            cur_value = dataframe[y_range_field].array[0]
+            title_blocks.append('{}={}'.format(y_range_field, cur_value))
+        if x_range_field:
+            cur_value = dataframe[x_range_field].array[0]
+            title_blocks.append('{}={}'.format(x_range_field, cur_value))
+        return ', '.join(title_blocks)
+
+
 class PlotType(Enum):
     line = 'line'
     plot = 'line'
@@ -198,6 +213,7 @@ def plot_single(
         bbox_to_anchor=None,
         ylim=None,
         axis=None,
+        title=None,
         plot=plt,
 ):
     graph_kws = dict(
@@ -232,6 +248,8 @@ def plot_single(
         plot.ylim(*ylim)
     if axis:
         plot.axis(axis)
+    if title:
+        plot.title.set_text(title)
     if plot_legend:
         plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
 
@@ -265,22 +283,23 @@ def plot_multiple(
     if cols_count > max_cols_count:
         cols_count = max_cols_count
     if verbose:
-        print('Plotting rows: {} ({}), columns: {} ({})...'.format(y_range_field, rows_count, x_range_field, cols_count))
+        print(
+            'Plotting rows: {} ({}), columns: {} ({})...'.format(y_range_field, rows_count, x_range_field, cols_count),
+            end='\r',
+        )
     fig, axis = plt.subplots(rows_count, cols_count, figsize=figsize)
 
     for row_no, row_data in enumerate(rows):
         cols = get_split_aggregate(row_data, x_range_field, x_range_values)
-        for col_no, col_data in enumerate(cols):
+        for col_no, subplot_data in enumerate(cols):
             if row_no < rows_count and col_no < cols_count:
                 if cols_count > 1:
-                    if rows_count > 1:
-                        block = axis[row_no, col_no]
-                    else:
-                        block = axis[col_no]
+                    block = axis[row_no, col_no] if rows_count > 1 else axis[col_no]
                 else:
-                    block = axis[row_no]
+                    block = axis[row_no] if rows_count > 1 else axis
+                subtitle = get_subplot_title(subplot_data, x_range_field, y_range_field, title)
                 plot_single(
-                    data=col_data,
+                    data=subplot_data,
                     x_field=x_axis_field,
                     y_field=y_axis_field,
                     cat_field=cat_field,
@@ -288,10 +307,22 @@ def plot_multiple(
                     cat_colors=cat_colors,
                     relative_y=relative_y,
                     plot_type=plot_type,
+                    title=subtitle,
                     plot=block,
                 )
-    if cat_field:
+    if cat_field and plot_type != PlotType.stackplot:
         block.legend(loc='best')
+    if verbose:
+        if cols_count > 1:
+            x_range_values = x_range_values or data_agg[x_range_field].unique()
+            print('{} {} in columns: {}'.format(
+                cols_count, x_range_field, ', '.join([str(v) for v in x_range_values])
+            ), ' ' * 25)
+        if rows_count > 1:
+            y_range_values = y_range_values or data_agg[y_range_field].unique()
+            print('{} {} in rows: {}'.format(
+                rows_count, y_range_field, ', '.join([str(v) for v in y_range_values])
+            ))
 
 
 def plot_hist(series, log=False, bins=None, max_bins=75, default_bins=10, max_value=1e3):
