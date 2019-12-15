@@ -191,6 +191,18 @@ def get_subplot_title(dataframe, x_range_field, y_range_field, title):
         return ', '.join(title_blocks)
 
 
+def process_lim(limit, series):
+    if isinstance(limit, str):
+        max_value = max(series)
+        if limit[-1:] == '%':
+            limit = max_value * float(limit[:-1]) / 100
+        elif limit == 'max':
+            limit = max_value
+    if isinstance(limit, (int, float)):
+        limit = (0, limit)
+    return limit
+
+
 class PlotType(Enum):
     line = 'line'
     plot = 'line'
@@ -245,10 +257,7 @@ def plot_single(
         title=None,
         plot=plt,
 ):
-    graph_kws = dict(
-        plot=plot,
-        plot_type=plot_type,
-    )
+    graph_kws = dict(plot=plot, plot_type=plot_type)
     if cat_field:
         if not cat_values:
             cat_values = data[cat_field].unique()
@@ -301,6 +310,7 @@ def plot_multiple(
         y_caption_field=None,
         plot_type=PlotType.line,
         relative_y=False,
+        xlim='max', ylim='max',
         max_cells_count=(16, 16),
         figsize=(15, 8),
         agg='sum',
@@ -313,7 +323,7 @@ def plot_multiple(
         data_agg = dataframe.groupby(list(dimensions), as_index=False).agg({f: agg for f in measures})
     else:
         data_agg = dataframe
-    
+    assert data_agg.shape[0] > 0, 'dataframe must be non-empty'
     rows = get_split_aggregate(data_agg, y_range_field, y_range_values)
     cols = get_split_aggregate(rows[0], x_range_field, x_range_values)
     rows_count = len(rows)
@@ -328,7 +338,12 @@ def plot_multiple(
             'Plotting rows: {} ({}), columns: {} ({})...'.format(y_range_field, rows_count, x_range_field, cols_count),
             end='\r',
         )
-    fig, axis = plt.subplots(rows_count, cols_count, figsize=figsize)
+    subplot_kw = dict()
+    x_is_numeric = isinstance(list(data_agg[x_axis_field])[0], (int, float))
+    if x_is_numeric:
+        subplot_kw['xlim'] = process_lim(xlim, data_agg[x_axis_field])
+    subplot_kw['ylim'] = process_lim(ylim, data_agg[y_axis_field])
+    fig, axis = plt.subplots(rows_count, cols_count, figsize=figsize, subplot_kw=subplot_kw)
 
     for row_no, row_data in enumerate(rows):
         cols = get_split_aggregate(row_data, x_range_field, x_range_values)
