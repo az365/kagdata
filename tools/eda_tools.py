@@ -141,6 +141,22 @@ def get_bin_by_value(value, bounds=DEFAULT_BOUNDS, bin_format='{:03}: {}', outpu
     return result
 
 
+def get_brief_caption(value, max_len=10):
+    if isinstance(value, (int, float)):
+        if value > 10:
+            value = int(value)
+        else:
+            value = round(3)
+        if value > 10000000:
+            value = '{}M'.format(round(value / 1000000, 1))
+        elif value > 10000:
+            value = '{}k'.format(round(value / 1000, 1))
+    elif isinstance(value, str):
+        if len(value) > max_len:
+            value = value[:max_len - 1] + '_'
+    return value
+
+
 def get_cum_sum_for_stackplot(dataframe, x_field, y_field, cat_field, reverse_cat=True):
     x_values = dataframe[x_field].unique()
     cat_values = dataframe[cat_field].unique()
@@ -204,10 +220,23 @@ def plot_series(x_values, y_values, plot=plt, plot_type=PlotType.line, **plot_kw
         raise ValueError('Unsupported plot type: {}'.format(plot_type))
 
 
+def plot_captions(plot, x_values, y_values, y_captions, y_offset_rate=40, y_min_size=25):
+    max_y = max(y_values)
+    offset_y = max_y / y_offset_rate
+    for c, x, y in zip(y_captions, x_values, y_values):
+        if isinstance(c, str):
+            plot_caption = True
+        else:
+            plot_caption = (c > max_y / y_min_size)
+        if plot_caption:
+            c = get_brief_caption(c)
+            plot.annotate(c, xy=(x, y - offset_y))
+
+
 def plot_single(
         data, x_field='x', y_field='y',
+        relative_y=False, caption_field=None,
         cat_field=None, cat_values=None, cat_colors=None,
-        relative_y=False,
         plot_type=PlotType.line,
         plot_legend=False, legend_location='best',
         bbox_to_anchor=None,
@@ -226,6 +255,10 @@ def plot_single(
         if relative_y:
             sum_y = data.groupby(x_field).agg({y_field: 'sum'})[y_field]
         if plot_type in (PlotType.stackplot, PlotType.bar) and cat_values is not None:
+            if cat_values is not None:
+                if caption_field == y_field:
+                    caption_field = '{}_'.format(y_field)
+                    data[caption_field] = data[y_field]
             data = get_cum_sum_for_stackplot(data, x_field, y_field, cat_field, reverse_cat=True)
         for cur_cat_value in cat_values:
             filtered_data = data[data[cat_field] == cur_cat_value]
@@ -240,10 +273,16 @@ def plot_single(
                 if color:
                     graph_kws['color'] = color
             plot_series(x_values, y_values, **graph_kws)
+            if caption_field:
+                y_captions = filtered_data[caption_field]
+                plot_captions(plot, x_values, y_values, y_captions)
     else:
         x_values = data[x_field]
         y_values = data[y_field]
         plot_series(x_values, y_values, **graph_kws)
+        if caption_field:
+            y_captions = data[caption_field]
+            plot_captions(plot, x_values, y_values, y_captions)
     if ylim:
         plot.ylim(*ylim)
     if axis:
@@ -259,11 +298,13 @@ def plot_multiple(
         x_range_field='shop_id', y_range_field='cat_id', x_range_values=None, y_range_values=None,
         x_axis_field='x', y_axis_field='cnt',
         cat_field=None, cat_values=None, cat_colors=None,
+        y_caption_field=None,
         plot_type=PlotType.line,
         relative_y=False,
         max_cells_count=(16, 16),
         figsize=(15, 8),
         agg='sum',
+        title='auto',
         verbose=True,
 ):
     if agg:
@@ -305,6 +346,7 @@ def plot_multiple(
                     cat_field=cat_field,
                     cat_values=cat_values,
                     cat_colors=cat_colors,
+                    caption_field=y_caption_field,
                     relative_y=relative_y,
                     plot_type=plot_type,
                     title=subtitle,
