@@ -53,7 +53,7 @@ def get_vstack_dataset(datasets):
         stack.append(
             new_part[new_columns]
         )
-    return pd.DataFrame(np.vstack(stack), columns=new_columns)    
+    return pd.DataFrame(np.vstack(stack), columns=new_columns)
 
 
 def get_unpivot(dataframe, fields_from=('cnt', 'revenue'), field_to='measure', value_to='value'):
@@ -140,57 +140,100 @@ def get_bin_by_value(value, bounds=DEFAULT_BOUNDS, bin_format='{:03}: {}', outpu
     return result
 
 
+def get_cum_sum_for_stackplot(dataframe, x_field, y_field, cat_field, reverse_cat=True):
+    x_values = dataframe[x_field].unique()
+    cat_values = dataframe[cat_field].unique()
+    for cur_x in x_values:
+        cum_sum = 0.0
+        for cur_cat in sorted(cat_values, reverse=reverse_cat):
+            cur_mask = (
+                (dataframe[x_field] == cur_x) &
+                (dataframe[cat_field] == cur_cat)
+            )
+            cur_row = dataframe[cur_mask]
+            has_row = bool(cur_row.shape[0])
+            if has_row:
+                cur_index = cur_row.index[0]
+                cur_value = cur_row[y_field].values[0]
+                cum_sum = cum_sum + cur_value
+                dataframe.loc[cur_index, y_field] = cum_sum
+    return dataframe
+
+
+class PlotType(Enum):
+    line = 'line'
+    plot = 'line'
+    log = 'loglog'
+    loglog = 'loglog'
+    stackplot = 'stackplot'
+    stack = 'stackplot'
+    bar = 'bar'
+
+
+def plot_series(x_values, y_values, plot=plt, plot_type=PlotType.line, **plot_kws):
+    plot_xy = (
+        # x_values.tolist(),
+        # y_values.tolist(),
+        list(x_values),
+        list(y_values),
+    )
+    if plot_type == PlotType.line:
+        plot.plot(*plot_xy, **plot_kws)
+    elif plot_type == PlotType.loglog:
+        plot.loglog(*plot_xy, **plot_kws)
+    elif plot_type == PlotType.stackplot:
+        plot.stackplot(*plot_xy, **plot_kws)
+    elif plot_type == PlotType.bar:
+        plot.bar(*plot_xy, **plot_kws)
+    else:
+        raise ValueError('Unsupported plot type: {}'.format(plot_type))
+
+
 def plot_single(
         data, x_field='x', y_field='y',
         cat_field=None, cat_values=None, cat_colors=None,
         relative_y=False,
-        stackplot=False,
+        plot_type=PlotType.line,
         plot_legend=False, legend_location='best',
         bbox_to_anchor=None,
         ylim=None,
         axis=None,
         plot=plt,
 ):
-    if relative_y:
-        sum_y = data.groupby(x_field).agg({y_field: 'sum'})[y_field]
+    graph_kws = dict(
+        plot=plot,
+        plot_type=plot_type,
+    )
     if cat_field:
         if not cat_values:
             cat_values = data[cat_field].unique()
+        if relative_y:
+            sum_y = data.groupby(x_field).agg({y_field: 'sum'})[y_field]
+        if plot_type in (PlotType.stackplot, PlotType.bar) and cat_values is not None:
+            data = get_cum_sum_for_stackplot(data, x_field, y_field, cat_field, reverse_cat=True)
         for cur_cat_value in cat_values:
             filtered_data = data[data[cat_field] == cur_cat_value]
             x_values = filtered_data[x_field]
             y_values = filtered_data[y_field]
-            plot_kws = dict()
             if relative_y:
                 y_values = y_values / sum_y
+            if plot_type in (PlotType.line, PlotType.bar):
+                graph_kws['label'] = cur_cat_value
             if cat_colors:
                 color = cat_colors.get(cur_cat_value)
                 if color:
-                    plot_kws['color'] = color
-            if stackplot:
-                plot.stackplot(
-                    x_values.tolist(),
-                    y_values.tolist(),
-                    **plot_kws
-                )
-            else:
-                plot.plot(
-                    x_values.tolist(),
-                    y_values.tolist(),
-                    label=cur_cat_value,
-                    **plot_kws
-                )
-        if plot_legend:
-            plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
+                    graph_kws['color'] = color
+            plot_series(x_values, y_values, **graph_kws)
     else:
-        plot.plot(
-            data[x_field].tolist(),
-            data[y_field].tolist(),
-        )
+        x_values = data[x_field]
+        y_values = data[y_field]
+        plot_series(x_values, y_values, **graph_kws)
     if ylim:
         plot.ylim(*ylim)
     if axis:
         plot.axis(axis)
+    if plot_legend:
+        plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
 
 
 def plot_multiple(
@@ -198,7 +241,7 @@ def plot_multiple(
         x_range_field='shop_id', y_range_field='cat_id', x_range_values=None, y_range_values=None,
         x_axis_field='x', y_axis_field='cnt',
         cat_field=None, cat_values=None, cat_colors=None,
-        stackplot=False,
+        plot_type=PlotType.line,
         relative_y=False,
         max_cells_count=(16, 16),
         figsize=(15, 8),
@@ -244,7 +287,7 @@ def plot_multiple(
                     cat_values=cat_values,
                     cat_colors=cat_colors,
                     relative_y=relative_y,
-                    stackplot=stackplot,
+                    plot_type=plot_type,
                     plot=block,
                 )
     if cat_field:
