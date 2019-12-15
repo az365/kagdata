@@ -142,7 +142,7 @@ def get_bin_by_value(value, bounds=DEFAULT_BOUNDS, bin_format='{:03}: {}', outpu
 
 def plot_single(
         data, x_field='x', y_field='y',
-        cat_field=None, cat_values=None,
+        cat_field=None, cat_values=None, cat_colors=None,
         relative_y=False,
         stackplot=False,
         plot_legend=False, legend_location='best',
@@ -160,18 +160,25 @@ def plot_single(
             filtered_data = data[data[cat_field] == cur_cat_value]
             x_values = filtered_data[x_field]
             y_values = filtered_data[y_field]
+            plot_kws = dict()
             if relative_y:
                 y_values = y_values / sum_y
+            if cat_colors:
+                color = cat_colors.get(cur_cat_value)
+                if color:
+                    plot_kws['color'] = color
             if stackplot:
                 plot.stackplot(
                     x_values.tolist(),
                     y_values.tolist(),
+                    **plot_kws
                 )
             else:
                 plot.plot(
                     x_values.tolist(),
                     y_values.tolist(),
                     label=cur_cat_value,
+                    **plot_kws
                 )
         if plot_legend:
             plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
@@ -190,7 +197,7 @@ def plot_multiple(
         dataframe,
         x_range_field='shop_id', y_range_field='cat_id', x_range_values=None, y_range_values=None,
         x_axis_field='x', y_axis_field='cnt',
-        cat_field=None, cat_values=None,
+        cat_field=None, cat_values=None, cat_colors=None,
         stackplot=False,
         relative_y=False,
         max_cells_count=(16, 16),
@@ -235,6 +242,7 @@ def plot_multiple(
                     y_field=y_axis_field,
                     cat_field=cat_field,
                     cat_values=cat_values,
+                    cat_colors=cat_colors,
                     relative_y=relative_y,
                     stackplot=stackplot,
                     plot=block,
