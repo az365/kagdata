@@ -303,6 +303,8 @@ def plot_single(
             if caption_field:
                 y_captions = filtered_data[caption_field]
                 plot_captions(plot, x_values, y_values, y_captions)
+        if plot_legend:
+            plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
     else:
         x_values = data[x_field]
         y_values = data[y_field]
@@ -332,6 +334,7 @@ def plot_multiple(
         max_cells_count=(16, 16),
         figsize=(15, 8),
         agg='sum',
+        plot_legend=True,
         title='auto',
         verbose=True,
 ):
@@ -385,7 +388,7 @@ def plot_multiple(
                     title=subtitle,
                     plot=block,
                 )
-    if cat_field and plot_type != PlotType.stackplot:
+    if plot_legend and cat_field and plot_type != PlotType.stackplot:
         block.legend(loc='best')
     if verbose:
         if cols_count > 1:
