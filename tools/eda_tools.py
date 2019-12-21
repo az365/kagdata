@@ -141,6 +141,24 @@ def get_bin_by_value(value, bounds=DEFAULT_BOUNDS, bin_format='{:03}: {}', outpu
     return result
 
 
+def meld_other(dataframe, cat_field, cat_values, minor_value='other', save_ones=False, sort_by_cat=True):
+    actual_cats = dataframe[cat_field].unique()
+    major_cats = [c for c in cat_values if c in actual_cats]
+    minor_cats = [c for c in actual_cats if c not in major_cats]
+    result = dataframe.copy()
+    result[cat_field] = result[cat_field].apply(
+        lambda c: c if c in major_cats else minor_value
+    )
+    if save_ones:  # preserve numbers of major cats for plot colors
+        for c in minor_cats:
+            result.append(
+                dataframe[dataframe[cat_field] == c].head(1)
+            )
+    if sort_by_cat:
+        result.sort_values(by=cat_field, inplace=True)
+    return result
+
+
 def get_brief_caption(value, max_len=10):
     if isinstance(value, (int, float)):
         if value > 10:
