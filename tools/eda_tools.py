@@ -176,23 +176,24 @@ def get_brief_caption(value, max_len=10):
 
 
 def get_cum_sum_for_stackplot(dataframe, x_field, y_field, cat_field, reverse_cat=True):
-    x_values = dataframe[x_field].unique()
-    cat_values = dataframe[cat_field].unique()
+    data = dataframe.copy()
+    x_values = data[x_field].unique()
+    cat_values = data[cat_field].unique()
     for cur_x in x_values:
         cum_sum = 0.0
         for cur_cat in sorted(cat_values, reverse=reverse_cat):
             cur_mask = (
-                (dataframe[x_field] == cur_x) &
-                (dataframe[cat_field] == cur_cat)
+                (data[x_field] == cur_x) &
+                (data[cat_field] == cur_cat)
             )
-            cur_row = dataframe[cur_mask]
+            cur_row = data[cur_mask]
             has_row = bool(cur_row.shape[0])
             if has_row:
                 cur_index = cur_row.index[0]
                 cur_value = cur_row[y_field].values[0]
                 cum_sum = cum_sum + cur_value
-                dataframe.loc[cur_index, y_field] = cum_sum
-    return dataframe
+                data.loc[cur_index, y_field] = cum_sum
+    return data
 
 
 def get_subplot_title(dataframe, x_range_field, y_range_field, title):
@@ -264,7 +265,7 @@ def plot_captions(plot, x_values, y_values, y_captions, y_offset_rate=40, y_min_
 
 
 def plot_single(
-        data, x_field='x', y_field='y',
+        dataframe, x_field='x', y_field='y',
         relative_y=False, caption_field=None,
         cat_field=None, cat_values=None, cat_colors=None,
         plot_type=PlotType.line,
@@ -278,15 +279,17 @@ def plot_single(
     graph_kws = dict(plot=plot, plot_type=plot_type)
     if cat_field:
         if not cat_values:
-            cat_values = data[cat_field].unique()
+            cat_values = dataframe[cat_field].unique()
         if relative_y:
-            sum_y = data.groupby(x_field).agg({y_field: 'sum'})[y_field]
-        if plot_type in (PlotType.stackplot, PlotType.bar) and cat_values is not None:
-            if cat_values is not None:
-                if caption_field == y_field:
-                    caption_field = '{}_'.format(y_field)
-                    data[caption_field] = data[y_field]
+            sum_y = dataframe.groupby(x_field).agg({y_field: 'sum'})[y_field]
+        if plot_type in (PlotType.stackplot, PlotType.bar):
+            data = dataframe.copy()
+            if caption_field == y_field:
+                caption_field = '{}_'.format(y_field)
+                data[caption_field] = data[y_field]
             data = get_cum_sum_for_stackplot(data, x_field, y_field, cat_field, reverse_cat=True)
+        else:
+            data = dataframe
         for cur_cat_value in cat_values:
             filtered_data = data[data[cat_field] == cur_cat_value]
             x_values = filtered_data[x_field]
@@ -306,11 +309,11 @@ def plot_single(
         if plot_legend:
             plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
     else:
-        x_values = data[x_field]
-        y_values = data[y_field]
+        x_values = dataframe[x_field]
+        y_values = dataframe[y_field]
         plot_series(x_values, y_values, **graph_kws)
         if caption_field:
-            y_captions = data[caption_field]
+            y_captions = dataframe[caption_field]
             plot_captions(plot, x_values, y_values, y_captions)
     if ylim:
         plot.ylim(*ylim)
