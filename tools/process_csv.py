@@ -20,11 +20,11 @@ SECONDARY_MEASURES = [
 ]
 
 
-def count_lines(filename, gz=False, chunk_size=8192):
+def count_lines(filename, encoding=None, gz=False, chunk_size=8192):
     if gz:
         fileholder = gzip.open(filename, 'r')
     else:
-        fileholder = open(filename, 'r')
+        fileholder = open(filename, 'r', encoding=encoding) if encoding else open(filename, 'r')
     result = sum(chunk.count('\n') for chunk in iter(lambda: fileholder.read(chunk_size), ''))
     fileholder.close()
     return result
@@ -32,13 +32,13 @@ def count_lines(filename, gz=False, chunk_size=8192):
 
 def get_csv_rows(
         filename,
-        encoding=None, delimiter=None, gz=False,
+        delimiter=None, encoding=None, gz=False,
         skip_first_line=False, max_n=None,
         verbose=False, step_n=10000,
 ):
     if verbose:
         print('Checking', filename, end='\r')
-        lines_count = count_lines(filename, gz)
+        lines_count = count_lines(filename, encoding, gz)
         if max_n and max_n < lines_count:
             lines_count = max_n
         print(' ' * 80, end='\r')
@@ -74,7 +74,9 @@ def read_several_files(
     for batch_name in batch_names:
         filename = file_template.format(prefix, batch_name, suffix)
         csv_rows = get_csv_rows(
-            filename, encoding, delimiter,
+            filename,
+            delimiter=delimiter,
+            encoding=encoding,
             skip_first_line=skip_first_line,
             max_n=max_n,
             verbose=verbose,
