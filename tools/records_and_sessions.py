@@ -383,16 +383,8 @@ def map_side_join(left, right, by, filter_left_by_right=False):
             yield r
 
 
-def get_records_from_reader(reader, scheme=SCHEME, skip_first_row=True, max_n=None, expected_n=None, step_n=10000):
-    records_count = max_n if (max_n or 0) > (expected_n or 0) else expected_n
+def get_records_from_reader(reader, scheme=SCHEME):
     for n, row in enumerate(reader):
-        if records_count:
-            if (n % step_n == 0) or (n >= records_count):
-                print('{}% ({}/{}) lines processed'.format(int(100 * n / records_count), n, records_count), end='\r')
-            if max_n and n >= max_n:
-                break
-        if skip_first_row and n == 0:
-            continue
         record = dict()
         for field_description, value in zip(scheme, row):
             field_name, field_type = field_description[:2]
@@ -400,7 +392,6 @@ def get_records_from_reader(reader, scheme=SCHEME, skip_first_row=True, max_n=No
                 value = int(value)
             elif field_type == 'float':
                 value = float(value)
-
             record[field_name] = value
         yield record
 

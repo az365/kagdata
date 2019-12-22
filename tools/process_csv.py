@@ -34,7 +34,7 @@ def get_csv_rows(
         filename,
         encoding=None, delimiter=None, gz=False,
         skip_first_line=False, max_n=None,
-        verbose=False, step_n=10000
+        verbose=False, step_n=10000,
 ):
     if verbose:
         print('Checking', filename, end='\r')
@@ -67,26 +67,22 @@ def get_csv_rows(
 
 def read_several_files(
         prefix, suffix, batch_names, file_template,
-        encoding=None,
-        delimiter=None, skip_first_line=False,
+        encoding=None, delimiter=None,
+        skip_first_line=False, max_n=None,
         verbose=True,
 ):
     for batch_name in batch_names:
         filename = file_template.format(prefix, batch_name, suffix)
-        if verbose:
-            print(verbose if isinstance(verbose, str) else 'Reading file:', filename)
-        if encoding:
-            fileholder = open(filename, 'r', encoding=encoding)
-        else:
-            fileholder = open(filename, 'r')
-        is_first_row = True
-        reader = csv.reader(fileholder, delimiter=delimiter) if delimiter else csv.reader(fileholder)
-        for row in reader:
-            if skip_first_line and is_first_row:
-                is_first_row = False
-                continue
+        csv_rows = get_csv_rows(
+            filename, encoding, delimiter,
+            skip_first_line=skip_first_line,
+            max_n=max_n,
+            verbose=verbose,
+        )
+        for n, row in enumerate(csv_rows):
             yield row
-        fileholder.close()
+            if max_n and n + 1 == max_n:
+                break
 
 
 def read_example_rows(filename, max_n=5):
