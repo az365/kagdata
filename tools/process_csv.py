@@ -20,14 +20,39 @@ SECONDARY_MEASURES = [
 ]
 
 
-def get_csv_rows(filename, encoding, delimiter, gz=False):
+def count_lines(filename, gz=False, chunk_size=8192):
     if gz:
         fileholder = gzip.open(filename, 'r')
     else:
-        fileholder = open(filename, 'r', encoding=encoding)
-    reader = csv.reader(fileholder, delimiter=delimiter)
-    for row in reader:
+        fileholder = open(filename, 'r')
+    result = sum(chunk.count('\n') for chunk in iter(lambda: fileholder.read(chunk_size), ''))
+    fileholder.close()
+    return result
+
+
+def get_csv_rows(filename, encoding=None, delimiter=None, gz=False, max_n=None, verbose=False, step_n=10000):
+    if verbose:
+        print('Checking', filename, end='\r')
+        lines_count = count_lines(filename, gz)
+        if max_n and max_n < lines_count:
+            lines_count = max_n
+        print(' ' * 80, end='\r')
+        print(verbose if isinstance(verbose, str) else 'Reading file:', filename)
+    if gz:
+        fileholder = gzip.open(filename, 'r')
+    else:
+        fileholder = open(filename, 'r', encoding=encoding) if encoding else open(filename, 'r')
+    reader = csv.reader(fileholder, delimiter=delimiter) if delimiter else csv.reader(fileholder)
+    for n, row in enumerate(reader):
+        if verbose:
+            if (n % step_n == 0) or (n + 1 >= lines_count):
+                percent = int(100 * (n + 1) / lines_count)
+                print('{}% ({}/{}) lines processed'.format(percent, n + 1, lines_count), end='\r')
         yield row
+        if max_n and n >= max_n:
+            break
+    if verbose:
+        print('')
     fileholder.close()
 
 
