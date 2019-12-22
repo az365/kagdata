@@ -273,16 +273,10 @@ def items_stats(
     columns_count = len(scheme)
     column_numbers = range(columns_count)
     column_names = [f[0] for f in scheme]
-    key_transform_function = None
     if isinstance(key, int):
         key_col_no = key
-    elif isinstance(key, str):
-        key_col_no = column_names.index(key)
-    elif isinstance(key, tuple):
-        key_transform_function, field = key
-        key_col_no = column_names.index(field)
     else:
-        raise ValueError('Unsupported key argument type: {} (instead of int, str, tuple)'.format(type(key)))
+        key_col_no = column_names.index(key)
     non_zero_counts = [{None: 0}] * columns_count
     min_values = [dict() for i in range(columns_count)]
     max_values = [dict() for i in range(columns_count)]
@@ -301,8 +295,6 @@ def items_stats(
         if actual_row_len == columns_count:
             parsed_rows_count += 1
             item = row[key_col_no]
-            if key_transform_function:
-                item = key_transform_function(item)
             if item not in parsed_items:
                 parsed_items.append(item)
             for col_no, field_description, cur_value in zip(column_numbers, scheme, row):
