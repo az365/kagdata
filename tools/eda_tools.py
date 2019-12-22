@@ -1,7 +1,10 @@
 from enum import Enum
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib import (
+    pyplot as plt,
+    patches as mp,
+)
 
 
 DEFAULT_BOUNDS = (0, 1, 10, 100, 1000, 10000, 100000)
@@ -234,8 +237,6 @@ class PlotType(Enum):
 
 def plot_series(x_values, y_values, plot=plt, plot_type=PlotType.line, **plot_kws):
     plot_xy = (
-        # x_values.tolist(),
-        # y_values.tolist(),
         list(x_values),
         list(y_values),
     )
@@ -272,7 +273,6 @@ def plot_single(
         plot_legend=False, legend_location='best',
         bbox_to_anchor=None,
         ylim=None,
-        axis=None,
         title=None,
         plot=plt,
 ):
@@ -307,7 +307,12 @@ def plot_single(
                 y_captions = filtered_data[caption_field]
                 plot_captions(plot, x_values, y_values, y_captions)
         if plot_legend:
-            plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
+            if plot_type == PlotType.stackplot:
+                if cat_colors:
+                    rectangles = [mp.Rectangle((0, 0), 1, 1, fc=cat_colors.get(c)) for c in cat_values]
+                    plot.legend(rectangles, cat_values, loc=legend_location, bbox_to_anchor=bbox_to_anchor)
+            else:
+                plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
     else:
         x_values = dataframe[x_field]
         y_values = dataframe[y_field]
@@ -317,12 +322,8 @@ def plot_single(
             plot_captions(plot, x_values, y_values, y_captions)
     if ylim:
         plot.ylim(*ylim)
-    if axis:
-        plot.axis(axis)
     if title:
         plot.title.set_text(title)
-    if plot_legend:
-        plot.legend(loc=legend_location, bbox_to_anchor=bbox_to_anchor)  # loc: best, upper right, ...
 
 
 def plot_multiple(
@@ -377,9 +378,11 @@ def plot_multiple(
                     block = axis[row_no, col_no] if rows_count > 1 else axis[col_no]
                 else:
                     block = axis[row_no] if rows_count > 1 else axis
+                is_last_block = row_no == len(rows) - 1 and col_no == len(cols) - 1
+                plot_legend_here = plot_legend and is_last_block
                 subtitle = get_subplot_title(subplot_data, x_range_field, y_range_field, title)
                 plot_single(
-                    data=subplot_data,
+                    dataframe=subplot_data,
                     x_field=x_axis_field,
                     y_field=y_axis_field,
                     cat_field=cat_field,
@@ -388,11 +391,10 @@ def plot_multiple(
                     caption_field=y_caption_field,
                     relative_y=relative_y,
                     plot_type=plot_type,
+                    plot_legend=plot_legend_here,
                     title=subtitle,
                     plot=block,
                 )
-    if plot_legend and cat_field and plot_type != PlotType.stackplot:
-        block.legend(loc='best')
     if verbose:
         if cols_count > 1:
             x_range_values = x_range_values or data_agg[x_range_field].unique()
