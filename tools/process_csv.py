@@ -53,6 +53,16 @@ def read_several_files(
         fileholder.close()
 
 
+def read_example_rows(filename, max_n=5):
+    fileholder = open(filename, 'r')
+    reader = csv.reader(fileholder)
+    for n, row in enumerate(reader):
+        print(row)
+        if max_n and (n >= max_n):
+            break
+    fileholder.close()
+
+
 def form_dataframe(fields_and_value_lists):
     columns = [i[0] for i in fields_and_value_lists]
     dict_values = {k: v for k, v in fields_and_value_lists}
