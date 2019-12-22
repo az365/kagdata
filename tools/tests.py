@@ -266,6 +266,15 @@ def test_add_secondary_fields():
     assert received == expected, 'test case {}, received {} instead of {}'.format(0, received, expected)
 
 
+def test_smoke_eda_plots():
+    df_test = pd.DataFrame([(1, 2, 'q'), (3, 4, 'q'), (1, 5, 'w'), (3, 6, 'w')], columns=('x', 'y', 'c'))
+    eda.plot_single(df_test, cat_field='c', plot_type=eda.PlotType.line, plot_legend=True)
+    eda.plot_single(df_test, cat_field='c', plot_type=eda.PlotType.bar, plot_legend=True)
+    eda.plot_single(df_test, cat_field='c', caption_field='y', plot_type=eda.PlotType.stackplot, plot_legend=True)
+    eda.plot_multiple(df_test, x_range_field='c', y_range_field=None, y_axis_field='y', plot_legend=True)
+    eda.plot_multiple(df_test, y_range_field='c', x_range_field=None, y_axis_field='y', y_caption_field='y')
+
+
 def get_rising_synth_sample(date_cnt=5, shop_cnt=2, item_cnt=3, item2cat={0: 1, 1: 1, 2: 2}, k=10):
     def get_rising_synth_data(date_cnt, shop_cnt, item_cnt, item2cat, k):
         for cur_date in range(date_cnt):
@@ -306,4 +315,5 @@ if __name__ == '__main__':
     test_reduce_session()
     test_get_bin_by_value()
     test_add_bin_fields()
+    test_smoke_eda_plots()
     test_add_rolling_features()
