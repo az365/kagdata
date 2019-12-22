@@ -195,17 +195,12 @@ def histogram_reduce(current_value, histogram_as_dict, item=None):
 
 
 def columns_stats(
-        filename, encoding='utf-8', delimiter=DELIMITER, gz=False,
+        reader,
         scheme=SCHEME,
-        head=None,
-        skip_first_row=False,
         skip_errors=True,
         output_errors=True,
-        verbose=True,
-        expected_lines_cnt=0,
         return_dataframe=False,
 ):
-    title = 'columns_stats()'
     parsed_rows_count = 0
     unparsed_rows_count = 0
     columns_count = len(scheme)
@@ -216,13 +211,7 @@ def columns_stats(
     sum_values = [None] * columns_count
     histograms = [None] * columns_count
 
-    rows = get_csv_rows(filename, encoding, delimiter, gz)
-    for n, row in enumerate(rows):
-        if skip_first_row and n == 0:
-            continue
-        if head:
-            if n >= head:
-                break
+    for n, row in enumerate(reader):
         actual_row_len = len(row)
         if actual_row_len == columns_count:
             parsed_rows_count += 1
@@ -262,18 +251,10 @@ def columns_stats(
                 raise ValueError(error_message)
             if output_errors:
                 print(error_message, end='')
-                line_begin = delimiter.join(row)
-                if len(line_begin) > 40:
-                    line_begin = line_begin[:40] + '...'
+                line_begin = '\t'.join(row)
+                if len(line_begin) > 100:
+                    line_begin = line_begin[:100] + '...'
                 print(':', line_begin)
-        if verbose and ((n % 10000 == 0) or (expected_lines_cnt and (n >= expected_lines_cnt - 1))):
-            if expected_lines_cnt:
-                print(
-                    '{}% ({}/{}) lines processed'.format(int(100 * n / expected_lines_cnt), n, expected_lines_cnt),
-                    end='\r',
-                )
-            else:
-                print('{} lines processed'.format(n), end='\r')
 
     distincts = [(f.keys() if isinstance(f, dict) else []) for f in histograms]
     counts = get_counts(distincts)
@@ -291,25 +272,20 @@ def columns_stats(
     ]
     if return_dataframe:
         if unparsed_rows_count:
-            print(title, ':', unparsed_rows_count, 'unparsed rows')
+            print(unparsed_rows_count, 'unparsed rows')
         return form_dataframe(result)
     else:
         return result, unparsed_rows_count
 
 
 def items_stats(
-        filename, encoding='utf-8', delimiter=DELIMITER, gz=False,
+        reader,
         scheme=SCHEME,
         key='item_id',
-        head=None,
-        skip_first_row=False,
         skip_errors=True,
         output_errors=True,
-        verbose=True,
-        expected_lines_cnt=0,
         return_dataframe=False,
 ):
-    title = 'items_stats()'
     parsed_items = list()
     parsed_rows_count = 0
     unparsed_rows_count = 0
@@ -333,13 +309,7 @@ def items_stats(
     avg_values = [dict() for i in range(columns_count)]
     histograms = [dict() for i in range(columns_count)]
 
-    rows = get_csv_rows(filename, encoding, delimiter, gz)
-    for n, row in enumerate(rows):
-        if skip_first_row and n == 0:
-            continue
-        if head:
-            if n >= head:
-                break
+    for n, row in enumerate(reader):
         actual_row_len = len(row)
         if actual_row_len == columns_count:
             parsed_rows_count += 1
@@ -385,18 +355,10 @@ def items_stats(
                 raise ValueError(error_message)
             if output_errors:
                 print(error_message, end='')
-                line_begin = delimiter.join(row)
-                if len(line_begin) > 140:
-                    line_begin = line_begin[:140] + '...'
+                line_begin = '\t'.join(row)
+                if len(line_begin) > 100:
+                    line_begin = line_begin[:100] + '...'
                 print(':', line_begin)
-        if verbose and ((n % 10000 == 0) or (expected_lines_cnt and (n >= expected_lines_cnt - 1))):
-            if expected_lines_cnt:
-                print(
-                    '{}% ({}/{}) lines processed'.format(int(100 * n / expected_lines_cnt), n, expected_lines_cnt),
-                    end='\r',
-                )
-            else:
-                print('{} lines processed'.format(n), end='\r')
 
     distincts = list()
     for histograms_by_items in histograms:
@@ -434,7 +396,7 @@ def items_stats(
             result.append(out_row.copy())
     if return_dataframe:
         if unparsed_rows_count:
-            print(title, ':', unparsed_rows_count, 'unparsed rows')
+            print(unparsed_rows_count, 'unparsed rows')
         return pd.DataFrame.from_records(result[1:], columns=result[0])
     else:
         return result, unparsed_rows_count
