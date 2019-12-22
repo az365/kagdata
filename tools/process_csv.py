@@ -6,9 +6,9 @@ import pandas as pd
 
 SCHEME = [  # (name, type, subtype)
     ('date', 'date', 'iso'),
-    ('shop_id', 'id'),
-    ('cat_id', 'cat'),
-    ('item_id', 'id'),
+    ('shop_id', 'str', 'id'),
+    ('cat_id', 'str', 'cat'),
+    ('item_id', 'str', 'id'),
     ('cnt', 'int', 'add'),  # additive
     ('price', 'float', 'rel'),  # relation
     ('revenue', 'float', 'add'),
@@ -216,10 +216,9 @@ def columns_stats(
         if actual_row_len == columns_count:
             parsed_rows_count += 1
             for col_no, field_description, cur_value in zip(column_numbers, scheme, row):
-                field_name, field_type = field_description[:2]
-                field_subtype = field_description[2] if len(field_description) > 2 else None
+                field_name, field_type, field_hint = field_description[:3]
                 if field_type == 'date':
-                    cur_value = string_to_date(cur_value, field_subtype)
+                    cur_value = string_to_date(cur_value, field_hint)
                 elif field_type == 'int':
                     cur_value = int(cur_value)
                 elif field_type == 'float':
@@ -231,16 +230,10 @@ def columns_stats(
                     max_values[col_no] = simple_reduce(cur_value, max_values[col_no], max)
                     if field_type != 'date':
                         sum_values[col_no] = simple_reduce(cur_value, sum_values[col_no], sum)
-                elif field_type == 'cat':
+                if field_hint == 'cat':
                     histograms[col_no] = histogram_reduce(cur_value, histograms[col_no])
-                elif field_type == 'id':
+                elif field_hint == 'id':
                     pass
-                else:
-                    error_message = 'Unsupported column type: {}'.format(field_type)
-                    if not skip_errors:
-                        raise ValueError(error_message)
-                    if output_errors:
-                        print(error_message)
         else:
             error_message = 'Incorrect columns count: {} instead of {} in line {}'.format(
                 actual_row_len, columns_count, n
@@ -319,11 +312,10 @@ def items_stats(
             if item not in parsed_items:
                 parsed_items.append(item)
             for col_no, field_description, cur_value in zip(column_numbers, scheme, row):
-                field_name, field_type = field_description[:2]
-                field_subtype = field_description[2] if len(field_description) > 2 else None
+                field_name, field_type, field_hint = field_description[:3]
                 if field_name != key:
                     if field_type == 'date':
-                        cur_value = string_to_date(cur_value, field_subtype)
+                        cur_value = string_to_date(cur_value, field_hint)
                     elif field_type == 'int':
                         cur_value = int(cur_value)
                     elif field_type == 'float':
@@ -335,16 +327,10 @@ def items_stats(
                         max_values[col_no] = item_reduce(cur_value, max_values[col_no], item, max)
                         if field_type != 'date':
                             sum_values[col_no] = item_reduce(cur_value, sum_values[col_no], item, sum)
-                    elif field_type == 'cat':
+                    if field_hint == 'cat':
                         histograms[col_no] = histogram_reduce(cur_value, histograms[col_no], item=item)
-                    elif field_type == 'id':
+                    elif field_hint == 'id':
                         pass
-                    else:
-                        error_message = 'Unsupported column type: {}'.format(field_type)
-                        if not skip_errors:
-                            raise ValueError(error_message)
-                        if output_errors:
-                            print(error_message)
         else:
             error_message = 'Incorrect columns count: {} instead of {} in line {}'.format(
                 actual_row_len, columns_count, n
