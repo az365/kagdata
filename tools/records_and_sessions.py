@@ -198,13 +198,16 @@ def filter_records_by_values(records, fields, list_values):
             yield r
 
 
-def apply_dict(records, field_in, field_out, dict_to_apply, default_value=None):
+def apply_dict(records, field_in, field_out, dict_to_apply, default_value=None, key_to_type=None):
     for r in records:
         value_in = r.get(field_in)
+        if key_to_type and value_in != '':
+            value_in = key_to_type(value_in)
         value_out = dict_to_apply.get(value_in, default_value)
         if value_out:
-            r[field_out] = value_out
-            yield r
+            r_out = r.copy()
+            r_out[field_out] = value_out
+            yield r_out
 
 
 def sort_records(records, by):
