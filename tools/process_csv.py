@@ -26,7 +26,9 @@ def get_csv_rows(filename, encoding, delimiter, gz=False):
     else:
         fileholder = open(filename, 'r', encoding=encoding)
     reader = csv.reader(fileholder, delimiter=delimiter)
-    return fileholder, reader
+    for row in reader:
+        yield row
+    fileholder.close()
 
 
 def read_several_files(
@@ -182,7 +184,7 @@ def columns_stats(
     sum_values = [None] * columns_count
     histograms = [None] * columns_count
 
-    fileholder, rows = get_csv_rows(filename, encoding, delimiter, gz)
+    rows = get_csv_rows(filename, encoding, delimiter, gz)
     for n, row in enumerate(rows):
         if skip_first_row and n == 0:
             continue
@@ -240,7 +242,6 @@ def columns_stats(
                 )
             else:
                 print('{} lines processed'.format(n), end='\r')
-    fileholder.close()
 
     distincts = [(f.keys() if isinstance(f, dict) else []) for f in histograms]
     counts = get_counts(distincts)
@@ -300,7 +301,7 @@ def items_stats(
     avg_values = [dict() for i in range(columns_count)]
     histograms = [dict() for i in range(columns_count)]
 
-    fileholder, rows = get_csv_rows(filename, encoding, delimiter, gz)
+    rows = get_csv_rows(filename, encoding, delimiter, gz)
     for n, row in enumerate(rows):
         if skip_first_row and n == 0:
             continue
@@ -364,7 +365,6 @@ def items_stats(
                 )
             else:
                 print('{} lines processed'.format(n), end='\r')
-    fileholder.close()
 
     distincts = list()
     for histograms_by_items in histograms:
