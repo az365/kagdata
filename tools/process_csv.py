@@ -30,7 +30,12 @@ def count_lines(filename, gz=False, chunk_size=8192):
     return result
 
 
-def get_csv_rows(filename, encoding=None, delimiter=None, gz=False, max_n=None, verbose=False, step_n=10000):
+def get_csv_rows(
+        filename,
+        encoding=None, delimiter=None, gz=False,
+        skip_first_line=False, max_n=None,
+        verbose=False, step_n=10000
+):
     if verbose:
         print('Checking', filename, end='\r')
         lines_count = count_lines(filename, gz)
@@ -42,14 +47,18 @@ def get_csv_rows(filename, encoding=None, delimiter=None, gz=False, max_n=None, 
         fileholder = gzip.open(filename, 'r')
     else:
         fileholder = open(filename, 'r', encoding=encoding) if encoding else open(filename, 'r')
+    is_first_line = True
     reader = csv.reader(fileholder, delimiter=delimiter) if delimiter else csv.reader(fileholder)
     for n, row in enumerate(reader):
         if verbose:
             if (n % step_n == 0) or (n + 1 >= lines_count):
                 percent = int(100 * (n + 1) / lines_count)
                 print('{}% ({}/{}) lines processed'.format(percent, n + 1, lines_count), end='\r')
+        if skip_first_line and is_first_line:
+            is_first_line = False
+            continue
         yield row
-        if max_n and n >= max_n:
+        if max_n and n + 1 == max_n:
             break
     if verbose:
         print('')
