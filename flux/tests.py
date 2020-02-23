@@ -39,6 +39,16 @@ def test_take():
     assert received == expected
 
 
+def test_skip():
+    expected = [2, 4, 6, 8]
+    received = readers.from_list(
+        TEST_INT_SEQUENCE,
+    ).skip(
+        5,
+    ).to_list()
+    assert received == expected
+
+
 def test_map_filter_take():
     expected = [-1, -3, -5]
     received = readers.from_list(
@@ -53,8 +63,18 @@ def test_map_filter_take():
     assert expected == received
 
 
+def test_enumerated():
+    expected = list(enumerate(TEST_INT_SEQUENCE))
+    received = readers.from_list(
+        TEST_INT_SEQUENCE,
+    ).enumerate().to_list()
+    assert expected == received
+
+
 if __name__ == '__main__':
     test_map()
     test_filter()
     test_take()
+    test_skip()
     test_map_filter_take()
+    test_enumerated()
