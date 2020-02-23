@@ -26,7 +26,7 @@ class Flux:
 
     def take(self, max_count=1):
         def internal_take(m):
-            for n, i in enumerate(self.input_iterable):
+            for n, i in self.enumerated():
                 if n >= m:
                     break
                 yield i
@@ -51,9 +51,6 @@ class Flux:
         for i in self.input_iterable:
             return i
 
-    def expected_count(self):
-        return self.expected_count
-
     def final_count(self):
         result = 0
         for _ in self.input_iterable:
@@ -69,3 +66,24 @@ class Flux:
             self.expected_count,
         )
 
+    def save(self, filename, encoding=None, end='\n', verbose=True):
+        def write_and_yield(fh, lines, verbose):
+            n = 0
+            for n, i in enumerate(lines):
+                if n > 0:
+                    fileholder.write(end)
+                fh.write(str(i))
+                yield i
+            fh.close()
+            if verbose:
+                print('Done. {} rows has written into {}'.format(n + 1, filename))
+        fileholder = open(filename, 'w', encoding=encoding) if encoding else open(filename, 'w')
+        return Flux(
+            write_and_yield(fileholder, self.input_iterable, verbose),
+            count=self.expected_count,
+        )
+
+    def to_file(self, filename, encoding=None, end='\n', verbose=True):
+        saved_flux = self.save(filename, encoding, end, verbose)
+        for _ in saved_flux.input_iterable:
+            pass

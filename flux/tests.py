@@ -7,6 +7,7 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
 
 
 TEST_INT_SEQUENCE = [1, 3, 5, 7, 9, 2, 4, 6, 8]
+TEST_FILENAME = 'test_file.tmp'
 
 
 def test_map():
@@ -60,7 +61,7 @@ def test_map_filter_take():
     ).take(
         3,
     ).to_list()
-    assert expected == received
+    assert received == expected
 
 
 def test_enumerated():
@@ -68,7 +69,32 @@ def test_enumerated():
     received = readers.from_list(
         TEST_INT_SEQUENCE,
     ).enumerate().to_list()
-    assert expected == received
+    assert received == expected
+
+
+def test_save_and_read():
+    expected = [str(i) for i in TEST_INT_SEQUENCE]
+    received_0 = readers.from_list(
+        TEST_INT_SEQUENCE,
+    ).save(
+        TEST_FILENAME,
+    ).map(
+        str,
+    ).to_list()
+    received_1 = readers.from_file(
+        TEST_FILENAME
+    ).to_list()
+    assert received_0 == expected, 'test case 0 failed'
+    assert received_1 == expected, 'test case 1 failed'
+    readers.from_list(
+        TEST_INT_SEQUENCE,
+    ).to_file(
+        TEST_FILENAME,
+    )
+    received_2 = readers.from_file(
+        TEST_FILENAME,
+    ).to_list()
+    assert received_2 == expected, 'test case 2 failed'
 
 
 if __name__ == '__main__':
@@ -78,3 +104,4 @@ if __name__ == '__main__':
     test_skip()
     test_map_filter_take()
     test_enumerated()
+    test_save_and_read()
