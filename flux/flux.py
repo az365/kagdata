@@ -99,3 +99,11 @@ class Flux:
             self.expected_count,
         )
 
+    def to_records(self, columns):
+        def get_records(rows, cols):
+            for r in rows:
+                yield {k: v for k, v in zip(cols, r)}
+        return Flux(
+            get_records(self.input_iterable, columns),
+            self.expected_count,
+        )
