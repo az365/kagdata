@@ -8,6 +8,11 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
 
 EXAMPLE_FILENAME = 'test_file.tmp'
 EXAMPLE_INT_SEQUENCE = [1, 3, 5, 7, 9, 2, 4, 6, 8]
+EXAMPLE_CSV_ROWS = [
+    'a,1',
+    'b,"2,22"',
+    'c,3',
+]
 
 
 def test_map():
@@ -97,6 +102,16 @@ def test_save_and_read():
     assert received_2 == expected, 'test case 2 failed'
 
 
+def test_to_rows():
+    expected = [['a', '1'], ['b', '2,22'], ['c', '3']]
+    received = readers.from_list(
+        EXAMPLE_CSV_ROWS,
+    ).to_rows(
+        ',',
+    ).to_list()
+    assert received == expected
+
+
 if __name__ == '__main__':
     test_map()
     test_filter()
@@ -105,3 +120,4 @@ if __name__ == '__main__':
     test_map_filter_take()
     test_enumerated()
     test_save_and_read()
+    test_to_rows()

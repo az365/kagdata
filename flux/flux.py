@@ -1,3 +1,6 @@
+import csv
+
+
 class Flux:
     def __init__(self, iterable, count=None):
         self.input_iterable = iterable
@@ -87,3 +90,12 @@ class Flux:
         saved_flux = self.save(filename, encoding, end, verbose)
         for _ in saved_flux.input_iterable:
             pass
+
+    def to_rows(self, delimiter=None):
+        lines = self.input_iterable
+        rows = csv.reader(lines, delimiter=delimiter) if delimiter else csv.reader(lines)
+        return Flux(
+            rows,
+            self.expected_count,
+        )
+
