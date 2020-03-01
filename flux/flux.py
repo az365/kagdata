@@ -10,6 +10,34 @@ class Flux:
     def validate(self, item):
         return True
 
+    def iterable(self):
+        for i in self.items:
+            yield i
+
+    def next(self):
+        return next(
+            self.iterable(),
+        )
+
+    def one(self):
+        for i in self.items:
+            return i
+
+    def expected_count(self):
+        return self.count
+
+    def final_count(self):
+        result = 0
+        for _ in self.items:
+            result += 1
+        return result
+
+    def set_count(self, count):
+        return Flux(
+            self.items,
+            count,
+        )
+
     def apply(self, function):
         return Flux(
             function(self.items),
@@ -56,12 +84,6 @@ class Flux:
             self.count - count
         )
 
-    def set_count(self, count):
-        return Flux(
-            self.items,
-            count,
-        )
-
     def add(self, flux_or_items, before=False, **kwargs):
         if isinstance(flux_or_items, Flux):
             return self.add_flux(
@@ -102,24 +124,30 @@ class Flux:
 
     def count_to_items(self):
         return self.add_items(
-            [self.count]
+            [self.count],
+            before=True,
         )
 
-    def next(self):
-        return next(self.items)
+    def separate_count(self):
+        return (
+            self.count,
+            self,
+        )
 
-    def one(self):
-        for i in self.items:
-            return i
-
-    def expected_count(self):
-        return self.count
-
-    def final_count(self):
-        result = 0
-        for _ in self.items:
-            result += 1
-        return result
+    def separate_first(self):
+        iterable = self.iterable()
+        count = self.count
+        if count:
+            count -= 1
+        title_item = next(iterable)
+        data_flux = Flux(
+            iterable,
+            count=count,
+        )
+        return (
+            title_item,
+            data_flux,
+        )
 
     def to_list(self):
         return list(self.items)

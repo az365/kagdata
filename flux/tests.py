@@ -107,31 +107,42 @@ def test_add():
     expected_1 = EXAMPLE_INT_SEQUENCE + addition
     expected_2 = addition + EXAMPLE_INT_SEQUENCE
     received_1i = readers.from_list(
-        EXAMPLE_INT_SEQUENCE
+        EXAMPLE_INT_SEQUENCE,
     ).add(
         addition
     ).to_list()
     assert received_1i == expected_1
     received_2i = readers.from_list(
-        EXAMPLE_INT_SEQUENCE
+        EXAMPLE_INT_SEQUENCE,
     ).add(
         addition,
         before=True,
     ).to_list()
     assert received_2i == expected_2
     received_1f = readers.from_list(
-        EXAMPLE_INT_SEQUENCE
+        EXAMPLE_INT_SEQUENCE,
     ).add(
         readers.from_list(addition),
     ).to_list()
     assert received_1f == expected_1
     received_2f = readers.from_list(
-        EXAMPLE_INT_SEQUENCE
+        EXAMPLE_INT_SEQUENCE,
     ).add(
         readers.from_list(addition),
         before=True,
     ).to_list()
     assert received_2f == expected_2
+
+
+def test_separate_first():
+    expected = [EXAMPLE_INT_SEQUENCE[0], EXAMPLE_INT_SEQUENCE[1:]]
+    received = list(
+        readers.from_list(
+            EXAMPLE_INT_SEQUENCE,
+        ).separate_first()
+    )
+    received[1] = received[1].to_list()
+    assert received == expected
 
 
 def test_to_rows():
@@ -153,4 +164,5 @@ if __name__ == '__main__':
     test_enumerated()
     test_save_and_read()
     test_add()
+    test_separate_first()
     test_to_rows()
