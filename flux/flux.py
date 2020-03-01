@@ -1,3 +1,4 @@
+from itertools import chain
 import csv
 
 
@@ -53,6 +54,27 @@ class Flux:
         return Flux(
             skip_items(count),
             self.count - count
+        )
+
+    def add(self, items, before=False, **kwargs):
+        old_items = self.items
+        total_count = None
+        if isinstance(items, Flux):
+            new_items = items.items
+            new_count = items.count
+            old_count = self.count
+            if old_count is not None:
+                total_count = new_count + old_count
+        else:
+            new_items = items
+            total_count = None
+        if before:
+            chain_records = chain(new_items, old_items)
+        else:
+            chain_records = chain(old_items, new_items)
+        return Flux(
+            chain_records,
+            count=total_count,
         )
 
     def next(self):
