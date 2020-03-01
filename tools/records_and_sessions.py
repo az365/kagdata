@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 
 try:  # Assume we're a sub-module in a package.
     from . import process_csv as pcsv
@@ -393,17 +394,33 @@ def map_side_join(left, right, by, filter_left_by_right=False, outer=False):
                 yield dict_right[key]
 
 
-def get_records_from_reader(reader, scheme=SCHEME):
+def get_records_from_reader(reader, scheme=SCHEME, ignore_errors=False, output_errors=True, skip_error_rows=True):
     for n, row in enumerate(reader):
         record = dict()
+        skip_this_row = False
         for field_description, value in zip(scheme, row):
             field_name, field_type = field_description[:2]
-            if field_type == 'int':
-                value = int(value)
-            elif field_type == 'float':
-                value = float(value)
-            record[field_name] = value
-        yield record
+            if field_type == 'json':
+                parsed_object = json.loads(value)
+                record.update(parsed_object)
+            else:
+                try:
+                    if field_type == 'int':
+                        value = int(value or 0)
+                    elif field_type == 'float':
+                        value = float(value or 0)
+                    record[field_name] = value
+                except ValueError:
+                    error_message = 'Field {} is not {}: {}'.format(field_name, field_type, value)
+                    if ignore_errors:
+                        if output_errors:
+                            print(error_message)
+                        if skip_error_rows:
+                            skip_error_rows = True
+                    else:
+                        raise ValueError(error_message)
+        if not skip_this_row:
+            yield record
 
 
 def get_dataframe_from_records(records, columns=None):
