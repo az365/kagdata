@@ -87,9 +87,9 @@ def read_several_files(
                 break
 
 
-def read_example_rows(filename, max_n=5):
+def read_example_rows(filename, delimiter=',', max_n=5):
     fileholder = open(filename, 'r')
-    reader = csv.reader(fileholder)
+    reader = csv.reader(fileholder, delimiter=delimiter)
     for n, row in enumerate(reader):
         print(row)
         if max_n and (n >= max_n):
