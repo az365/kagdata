@@ -6,6 +6,14 @@ class Flux:
         self.items = items
         self.count = count
 
+    def validate(self, item):
+        return True
+
+    def apply(self, function):
+        return Flux(
+            function(self.items),
+        )
+
     def map(self, function):
         return Flux(
             map(function, self.items),
