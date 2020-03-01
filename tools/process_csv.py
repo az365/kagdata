@@ -4,13 +4,13 @@ import datetime as dt
 import pandas as pd
 
 
-SCHEME = [  # (name, type, subtype)
+SCHEME = [  # (name, type, hint)
     ('date', 'date', 'iso'),
-    ('shop_id', 'str', 'id'),
-    ('cat_id', 'str', 'cat'),
+    ('shop_id', 'str', 'id'),  # id hint: too much values, do not calc hist
+    ('cat_id', 'str', 'cat'),  # cat hint: less number of values, calc hist
     ('item_id', 'str', 'id'),
-    ('cnt', 'int', 'add'),  # additive
-    ('price', 'float', 'rel'),  # relation
+    ('cnt', 'int', 'add'),  # additive: could calc sum and mean
+    ('price', 'float', 'rel'),  # relation: do not calc sum and mean
     ('revenue', 'float', 'add'),
 ]
 NUM_TYPES = ('int', 'float', 'num', 'date')
