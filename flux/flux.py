@@ -56,6 +56,17 @@ class Flux:
             self.count - count
         )
 
+    def set_count(self, count):
+        return Flux(
+            self.items,
+            count,
+        )
+
+    def count_to_items(self):
+        return self.add(
+            [self.count]
+        )
+
     def add(self, items, before=False, **kwargs):
         old_items = self.items
         total_count = None
