@@ -201,6 +201,32 @@ class Flux:
         else:
             raise TypeError('split_by_pos(pos): pos(s) must be int of list, received: {}'.format(type(pos)))
 
+    def split_by_numeric(self, func, count):
+        return [
+            f.filter(
+                lambda i, n=n: func(i) == n,
+            ) for n, f in enumerate(
+                self.tee(count),
+            )
+        ]
+
+    def split_by_boolean(self, func):
+        return self.split_by_numeric(
+            func=lambda f: int(bool(func(f))),
+            count=2,
+        )
+
+    def split(self, by, count=None):
+        if isinstance(by, (int, list, tuple)):
+            return self.split_by_pos(by)
+        elif callable(by):
+            if count:
+                return self.split_by_numeric(by, count)
+            else:
+                return self.split_by_boolean(by)
+        else:
+            raise TypeError('split(by): by-argument must be int, list, tuple or function, {} received'.format(type(by)))
+
     def to_list(self):
         return list(self.items)
 

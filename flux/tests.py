@@ -150,7 +150,7 @@ def test_split_by_pos():
     expected_1 = EXAMPLE_INT_SEQUENCE[:pos_1], EXAMPLE_INT_SEQUENCE[pos_1:]
     a, b = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
-    ).split_by_pos(
+    ).split(
         pos_1,
     )
     received_1 = a.to_list(), b.to_list()
@@ -162,11 +162,22 @@ def test_split_by_pos():
     )
     a, b, c = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
-    ).split_by_pos(
+    ).split(
         (pos_1, pos_2),
     )
     received_2 = a.count_to_items().to_list(), b.count_to_items().to_list(), c.count_to_items().to_list()
     assert received_2 == expected_2, 'test case 2'
+
+
+def test_split_by_func():
+    expected = [1, 3, 2, 4], [5, 7, 9, 6, 8]
+    a, b = readers.from_list(
+        EXAMPLE_INT_SEQUENCE
+    ).split(
+        lambda i: i >= 5,
+    )
+    received = a.to_list(), b.to_list()
+    assert received == expected
 
 
 def test_to_rows():
@@ -190,4 +201,5 @@ if __name__ == '__main__':
     test_add()
     test_separate_first()
     test_split_by_pos()
+    test_split_by_func()
     test_to_rows()
