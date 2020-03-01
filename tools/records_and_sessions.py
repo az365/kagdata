@@ -99,7 +99,7 @@ def increment_histograms(record, histograms, dimensions, measures, inplace=True)
             cur_increment = record.get(m, 0)
         assert isinstance(
             cur_increment, (int, float),
-        ), 'unsupported measure type for increment: {} (int of float needed), value={}'.format(
+        ), 'unsupported measure type for increment: {} (int or float needed), value={}'.format(
             type(cur_increment), cur_increment,
         )
         histograms[n][cur_hist_key] = histograms[n].get(cur_hist_key, 0) + cur_increment
@@ -371,8 +371,9 @@ def get_composite_key(record, fields):
     return tuple(list_values)
 
 
-def map_side_join(left, right, by, filter_left_by_right=False):
+def map_side_join(left, right, by, filter_left_by_right=False, outer=False):
     # by-argument can be one field or list of fields
+    keys_used = set()
     if isinstance(right, dict):
         dict_right = right
     else:
@@ -380,10 +381,16 @@ def map_side_join(left, right, by, filter_left_by_right=False):
     for r in left:
         key = get_composite_key(r, by)
         right_part = dict_right.get(key)
+        if outer:
+            keys_used.add(key)
         if right_part:
             r.update(right_part)
         if right_part or not filter_left_by_right:
             yield r
+    if outer:
+        for key in dict_right:
+            if key not in keys_used:
+                yield dict_right[key]
 
 
 def get_records_from_reader(reader, scheme=SCHEME):
