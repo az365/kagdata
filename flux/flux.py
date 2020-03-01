@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import chain, tee
 import csv
 
 
@@ -38,6 +38,24 @@ class Flux:
             count,
         )
 
+    def tee(self, n=2):
+        return [
+            Flux(
+                i,
+                count=self.count,
+            ) for i in tee(
+                self.items,
+                n,
+            )
+        ]
+
+    def copy(self):
+        self.items, copy_items = tee(self.items, 2)
+        return Flux(
+            copy_items,
+            count=self.count,
+        )
+
     def apply(self, function):
         return Flux(
             function(self.items),
@@ -71,7 +89,8 @@ class Flux:
                     break
                 yield i
         return Flux(
-            take_items(max_count)
+            take_items(max_count),
+            min(self.count, max_count) if self.count else None,
         )
 
     def skip(self, count=1):
@@ -81,7 +100,7 @@ class Flux:
                     yield i
         return Flux(
             skip_items(count),
-            self.count - count
+            self.count - count if self.count else None,
         )
 
     def add(self, flux_or_items, before=False, **kwargs):
@@ -148,6 +167,39 @@ class Flux:
             title_item,
             data_flux,
         )
+
+    def split_by_pos(self, pos):
+        if isinstance(pos, int):
+            first_flux, second_flux = self.tee(2)
+            return (
+                first_flux.take(pos),
+                second_flux.skip(pos),
+            )
+        elif isinstance(pos, (list, tuple)):
+            count_limits = len(pos)
+            cloned_fluxes = self.tee(count_limits + 1)
+            filtered_fluxes = list()
+            prev_pos = 0
+            for n, cur_pos in enumerate(pos):
+                count_items = cur_pos - prev_pos
+                filtered_fluxes.append(
+                    cloned_fluxes[n].skip(
+                        prev_pos,
+                    ).take(
+                        count_items,
+                    ).set_count(
+                        count_items,
+                    )
+                )
+                prev_pos = cur_pos
+            filtered_fluxes.append(
+                cloned_fluxes[-1].skip(
+                    pos[-1],
+                )
+            )
+            return filtered_fluxes
+        else:
+            raise TypeError('split_by_pos(pos): pos(s) must be int of list, received: {}'.format(type(pos)))
 
     def to_list(self):
         return list(self.items)

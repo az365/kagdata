@@ -89,8 +89,8 @@ def test_save_and_read():
     received_1 = readers.from_file(
         EXAMPLE_FILENAME
     ).to_list()
-    assert received_0 == expected, 'test case 0 failed'
-    assert received_1 == expected, 'test case 1 failed'
+    assert received_0 == expected, 'test case 0'
+    assert received_1 == expected, 'test case 1'
     readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).to_file(
@@ -99,7 +99,7 @@ def test_save_and_read():
     received_2 = readers.from_file(
         EXAMPLE_FILENAME,
     ).to_list()
-    assert received_2 == expected, 'test case 2 failed'
+    assert received_2 == expected, 'test case 2'
 
 
 def test_add():
@@ -111,27 +111,27 @@ def test_add():
     ).add(
         addition
     ).to_list()
-    assert received_1i == expected_1
+    assert received_1i == expected_1, 'test case 1i'
     received_2i = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).add(
         addition,
         before=True,
     ).to_list()
-    assert received_2i == expected_2
+    assert received_2i == expected_2, 'test case 2i'
     received_1f = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).add(
         readers.from_list(addition),
     ).to_list()
-    assert received_1f == expected_1
+    assert received_1f == expected_1, 'test case 1f'
     received_2f = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).add(
         readers.from_list(addition),
         before=True,
     ).to_list()
-    assert received_2f == expected_2
+    assert received_2f == expected_2, 'test case 2f'
 
 
 def test_separate_first():
@@ -143,6 +143,30 @@ def test_separate_first():
     )
     received[1] = received[1].to_list()
     assert received == expected
+
+
+def test_split_by_pos():
+    pos_1, pos_2 = 3, 5
+    expected_1 = EXAMPLE_INT_SEQUENCE[:pos_1], EXAMPLE_INT_SEQUENCE[pos_1:]
+    a, b = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).split_by_pos(
+        pos_1,
+    )
+    received_1 = a.to_list(), b.to_list()
+    assert received_1 == expected_1, 'test case 1'
+    expected_2 = (
+        [pos_1] + EXAMPLE_INT_SEQUENCE[:pos_1],
+        [pos_2 - pos_1] + EXAMPLE_INT_SEQUENCE[pos_1:pos_2],
+        [len(EXAMPLE_INT_SEQUENCE) - pos_2] + EXAMPLE_INT_SEQUENCE[pos_2:],
+    )
+    a, b, c = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).split_by_pos(
+        (pos_1, pos_2),
+    )
+    received_2 = a.count_to_items().to_list(), b.count_to_items().to_list(), c.count_to_items().to_list()
+    assert received_2 == expected_2, 'test case 2'
 
 
 def test_to_rows():
@@ -165,4 +189,5 @@ if __name__ == '__main__':
     test_save_and_read()
     test_add()
     test_separate_first()
+    test_split_by_pos()
     test_to_rows()
