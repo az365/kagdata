@@ -102,6 +102,38 @@ def test_save_and_read():
     assert received_2 == expected, 'test case 2 failed'
 
 
+def test_add():
+    addition = list(reversed(EXAMPLE_INT_SEQUENCE))
+    expected_1 = EXAMPLE_INT_SEQUENCE + addition
+    expected_2 = addition + EXAMPLE_INT_SEQUENCE
+    received_1i = readers.from_list(
+        EXAMPLE_INT_SEQUENCE
+    ).add(
+        addition
+    ).to_list()
+    assert received_1i == expected_1
+    received_2i = readers.from_list(
+        EXAMPLE_INT_SEQUENCE
+    ).add(
+        addition,
+        before=True,
+    ).to_list()
+    assert received_2i == expected_2
+    received_1f = readers.from_list(
+        EXAMPLE_INT_SEQUENCE
+    ).add(
+        readers.from_list(addition),
+    ).to_list()
+    assert received_1f == expected_1
+    received_2f = readers.from_list(
+        EXAMPLE_INT_SEQUENCE
+    ).add(
+        readers.from_list(addition),
+        before=True,
+    ).to_list()
+    assert received_2f == expected_2
+
+
 def test_to_rows():
     expected = [['a', '1'], ['b', '2,22'], ['c', '3']]
     received = readers.from_list(
@@ -120,4 +152,5 @@ if __name__ == '__main__':
     test_map_filter_take()
     test_enumerated()
     test_save_and_read()
+    test_add()
     test_to_rows()

@@ -62,30 +62,47 @@ class Flux:
             count,
         )
 
-    def count_to_items(self):
-        return self.add(
-            [self.count]
-        )
-
-    def add(self, items, before=False, **kwargs):
-        old_items = self.items
-        total_count = None
-        if isinstance(items, Flux):
-            new_items = items.items
-            new_count = items.count
-            old_count = self.count
-            if old_count is not None:
-                total_count = new_count + old_count
+    def add(self, flux_or_items, before=False, **kwargs):
+        if isinstance(flux_or_items, Flux):
+            return self.add_flux(
+                flux_or_items,
+                before=before,
+            )
         else:
-            new_items = items
-            total_count = None
+            return self.add_items(
+                flux_or_items,
+                before=before
+            )
+
+    def add_items(self, items, before=False):
+        old_items = self.items
+        new_items = items
         if before:
             chain_records = chain(new_items, old_items)
         else:
             chain_records = chain(old_items, new_items)
         return Flux(
             chain_records,
-            count=total_count,
+            count=None,
+        )
+
+    def add_flux(self, flux, before=False):
+        old_count = self.count
+        new_count = flux.count
+        if old_count is not None or new_count is not None:
+            total_count = new_count + old_count
+        else:
+            total_count = None
+        return self.add_items(
+            flux.items,
+            before=before,
+        ).set_count(
+            total_count,
+        )
+
+    def count_to_items(self):
+        return self.add_items(
+            [self.count]
         )
 
     def next(self):
