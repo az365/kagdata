@@ -2,71 +2,74 @@ import csv
 
 
 class Flux:
-    def __init__(self, iterable, count=None):
-        self.input_iterable = iterable
-        self.expected_count = count
+    def __init__(self, items, count=None):
+        self.items = items
+        self.count = count
 
     def map(self, function):
         return Flux(
-            map(function, self.input_iterable),
-            self.expected_count,
+            map(function, self.items),
+            self.count,
         )
 
     def filter(self, function):
         return Flux(
-            filter(function, self.input_iterable),
+            filter(function, self.items),
         )
 
     def enumerated(self):
-        for n, i in enumerate(self.input_iterable):
+        for n, i in enumerate(self.items):
             yield n, i
 
     def enumerate(self):
         return Flux(
-            iterable=self.enumerated(),
-            count=self.expected_count
+            items=self.enumerated(),
+            count=self.count,
         )
 
     def take(self, max_count=1):
-        def internal_take(m):
+        def take_items(m):
             for n, i in self.enumerated():
                 if n >= m:
                     break
                 yield i
         return Flux(
-            internal_take(max_count)
+            take_items(max_count)
         )
 
     def skip(self, count=1):
-        def internal_skip(c):
+        def skip_items(c):
             for n, i in self.enumerated():
                 if n >= c:
                     yield i
         return Flux(
-            internal_skip(count),
-            self.expected_count - count
+            skip_items(count),
+            self.count - count
         )
 
     def next(self):
-        return next(self.input_iterable)
+        return next(self.items)
 
     def one(self):
-        for i in self.input_iterable:
+        for i in self.items:
             return i
+
+    def expected_count(self):
+        return self.count
 
     def final_count(self):
         result = 0
-        for _ in self.input_iterable:
+        for _ in self.items:
             result += 1
         return result
 
     def to_list(self):
-        return list(self.input_iterable)
+        return list(self.items)
 
     def convert_to_list(self):
         return Flux(
             self.to_list(),
-            self.expected_count,
+            self.count,
         )
 
     def save(self, filename, encoding=None, end='\n', verbose=True):
@@ -82,21 +85,21 @@ class Flux:
                 print('Done. {} rows has written into {}'.format(n + 1, filename))
         fileholder = open(filename, 'w', encoding=encoding) if encoding else open(filename, 'w')
         return Flux(
-            write_and_yield(fileholder, self.input_iterable, verbose),
-            count=self.expected_count,
+            write_and_yield(fileholder, self.items, verbose),
+            count=self.count,
         )
 
     def to_file(self, filename, encoding=None, end='\n', verbose=True):
         saved_flux = self.save(filename, encoding, end, verbose)
-        for _ in saved_flux.input_iterable:
+        for _ in saved_flux.items:
             pass
 
     def to_rows(self, delimiter=None):
-        lines = self.input_iterable
+        lines = self.items
         rows = csv.reader(lines, delimiter=delimiter) if delimiter else csv.reader(lines)
         return Flux(
             rows,
-            self.expected_count,
+            self.count,
         )
 
     def to_records(self, columns):
@@ -104,6 +107,6 @@ class Flux:
             for r in rows:
                 yield {k: v for k, v in zip(cols, r)}
         return Flux(
-            get_records(self.input_iterable, columns),
-            self.expected_count,
+            get_records(self.items, columns),
+            self.count,
         )
