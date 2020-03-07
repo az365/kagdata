@@ -1,9 +1,9 @@
 from itertools import chain
 
 try:  # Assume we're a sub-module in a package.
-    from .flux import Flux
+    from . import fluxes as fx
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
-    from flux import Flux
+    import fluxes as fx
 
 
 def is_record(item):
@@ -21,12 +21,27 @@ def check_records(records, skip_errors=False):
         yield r
 
 
-class RecordsFlux(Flux):
+class RecordsFlux(fx.AnyFlux):
     def __init__(self, items, count=None, check=True):
         super().__init__(
             items=check_records(items) if check else items,
             count=count,
         )
+        self.check = check
+
+    def meta(self):
+        return dict(
+            count=self.count,
+            check=self.check,
+        )
+
+    @staticmethod
+    def is_valid_item(item):
+        return is_record(item)
+
+    @staticmethod
+    def valid_items(items, skip_errors=False):
+        return check_records(items, skip_errors)
 
     def set_count(self, count):
         return RecordsFlux(
@@ -41,40 +56,19 @@ class RecordsFlux(Flux):
         else:
             return self.items
 
-    def add_records(self, records, before=False, skip_errors=False):
-        new_records = check_records(records, skip_errors)
-        old_records = self.get_records(skip_errors)
-        if before:
-            chain_records = chain(new_records, old_records)
-        else:
-            chain_records = chain(old_records, new_records)
-        return RecordsFlux(
-            chain_records,
-            count=None,
-        )
-
-    def add_flux(self, flux, before=False, skip_errors=False):
-        return self.add_records(
-            flux.input_iterable,
-            before=before,
-            skip_errors=skip_errors,
-        ).set_count(
-            self.count + flux.expected_count,
-        )
-
     def to_rows(self, columns, add_title_row=False):
         def get_rows(columns_list):
             if add_title_row:
                 yield columns_list
             for r in self.items:
                 yield [r.get(f) for f in columns_list]
-        return Flux(
+        return fx.RowsFlux(
             get_rows(list(columns)),
             self.count + (1 if add_title_row else 0),
         )
 
     def to_lines(self, columns, add_title_row=False, delimiter='\t'):
-        return Flux(
+        return fx.LinesFlux(
             self.to_rows(columns, add_title_row=add_title_row),
             self.count,
         ).map(

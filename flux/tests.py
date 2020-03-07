@@ -1,8 +1,6 @@
 try:  # Assume we're a sub-module in a package.
-    from . import flux
     from . import readers
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
-    import flux
     import readers
 
 
@@ -81,6 +79,9 @@ def test_save_and_read():
     expected = [str(i) for i in EXAMPLE_INT_SEQUENCE]
     received_0 = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
+    ).map(
+        str
+    ).to_lines(
     ).save(
         EXAMPLE_FILENAME,
     ).map(
@@ -93,6 +94,9 @@ def test_save_and_read():
     assert received_1 == expected, 'test case 1'
     readers.from_list(
         EXAMPLE_INT_SEQUENCE,
+    ).map(
+        str
+    ).to_lines(
     ).to_file(
         EXAMPLE_FILENAME,
     )
@@ -132,6 +136,30 @@ def test_add():
         before=True,
     ).to_list()
     assert received_2f == expected_2, 'test case 2f'
+
+
+def test_add_records():
+    addition = list(reversed(EXAMPLE_INT_SEQUENCE))
+    expected_1 = list(map(lambda v: dict(item=v), EXAMPLE_INT_SEQUENCE + addition))
+    expected_2 = list(map(lambda v: dict(item=v), addition + EXAMPLE_INT_SEQUENCE))
+    received_1 = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).to_records(
+        lambda i: dict(item=i),
+    ).add(
+        readers.from_list(addition).to_records(),
+    ).to_list()
+    print(received_1)
+    assert received_1 == expected_1, 'test case 1i'
+    received_2 = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).to_records(
+    ).add(
+        readers.from_list(addition).to_records(),
+        before=True,
+    ).to_list()
+    print(received_2)
+    assert received_2 == expected_2, 'test case 2i'
 
 
 def test_separate_first():
@@ -184,6 +212,7 @@ def test_to_rows():
     expected = [['a', '1'], ['b', '2,22'], ['c', '3']]
     received = readers.from_list(
         EXAMPLE_CSV_ROWS,
+    ).to_lines(
     ).to_rows(
         ',',
     ).to_list()
@@ -199,6 +228,7 @@ if __name__ == '__main__':
     test_enumerated()
     test_save_and_read()
     test_add()
+    test_add_records()
     test_separate_first()
     test_split_by_pos()
     test_split_by_func()

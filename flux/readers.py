@@ -1,22 +1,23 @@
 import gzip
+
 try:  # Assume we're a sub-module in a package.
-    from .flux import Flux
+    from . import fluxes as fx
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
-    from flux import Flux
+    import fluxes as fx
 
 
 VERBOSE_STEP = 10000
 
 
 def iterable(any_iterable):
-    return Flux(any_iterable)
+    return fx.AnyFlux(any_iterable)
 
 
 def from_list(input_list):
     def get_generator_from_list(mylist):
         for i in mylist:
             yield i
-    return Flux(
+    return fx.AnyFlux(
         get_generator_from_list(input_list),
         count=len(input_list),
     )
@@ -68,9 +69,10 @@ def from_file(
     else:
         fileholder = open(filename, 'r', encoding=encoding) if encoding else open(filename, 'r')
 
-    flux_from_file = Flux(
+    flux_from_file = fx.LinesFlux(
         lines_from_fileholder(fileholder, lines_count, verbose, step_n),
         lines_count,
+        source=filename,
     )
     if skip_first_line:
         flux_from_file = flux_from_file.skip(1)
