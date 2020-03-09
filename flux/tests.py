@@ -57,7 +57,7 @@ def test_map_filter_take():
     expected = [-1, -3, -5]
     received = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
-    ).map(
+    ).flat_map(
         lambda i: -i,
     ).filter(
         lambda i: i % 2,
@@ -79,13 +79,9 @@ def test_save_and_read():
     expected = [str(i) for i in EXAMPLE_INT_SEQUENCE]
     received_0 = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
-    ).map(
-        str
     ).to_lines(
     ).save(
         EXAMPLE_FILENAME,
-    ).map(
-        str,
     ).to_list()
     received_1 = readers.from_file(
         EXAMPLE_FILENAME
@@ -94,8 +90,6 @@ def test_save_and_read():
     assert received_1 == expected, 'test case 1'
     readers.from_list(
         EXAMPLE_INT_SEQUENCE,
-    ).map(
-        str
     ).to_lines(
     ).to_file(
         EXAMPLE_FILENAME,

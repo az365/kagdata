@@ -87,8 +87,14 @@ class AnyFlux:
             **props
         )
 
-    def map(self, function):
+    def flat_map(self, function):
         return self.__class__(
+            map(function, self.items),
+            self.count,
+        )
+
+    def map(self, function):
+        return AnyFlux(
             map(function, self.items),
             self.count,
         )
@@ -279,13 +285,13 @@ class AnyFlux:
 
     def to_any(self):
         return fx.AnyFlux(
-            items=self.items,
+            self.items,
             count=self.count,
         )
 
     def to_lines(self, **kwargs):
         return fx.LinesFlux(
-            items=self.items,
+            self.map(str).items,
             count=self.count,
             check=True,
         )
@@ -294,6 +300,12 @@ class AnyFlux:
         return self.map(
             json.dumps
         ).to_lines()
+
+    def to_rows(self, **kwargs):
+        return fx.RowsFlux(
+            self.items,
+            count=self.count,
+        )
 
     def to_records(self, function=lambda i: dict(item=i), **kwargs):
         return fx.RecordsFlux(
