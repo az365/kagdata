@@ -1,5 +1,3 @@
-from itertools import chain
-
 try:  # Assume we're a sub-module in a package.
     from . import fluxes as fx
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
@@ -56,6 +54,14 @@ class RecordsFlux(fx.AnyFlux):
         else:
             return self.items
 
+    def to_lines(self, columns, add_title_row=False, delimiter='\t'):
+        return fx.LinesFlux(
+            self.to_rows(columns, add_title_row=add_title_row),
+            self.count,
+        ).map(
+            delimiter.join,
+        )
+
     def to_rows(self, columns, add_title_row=False):
         def get_rows(columns_list):
             if add_title_row:
@@ -67,10 +73,22 @@ class RecordsFlux(fx.AnyFlux):
             self.count + (1 if add_title_row else 0),
         )
 
-    def to_lines(self, columns, add_title_row=False, delimiter='\t'):
-        return fx.LinesFlux(
-            self.to_rows(columns, add_title_row=add_title_row),
-            self.count,
-        ).map(
-            delimiter.join,
+    def to_pairs(self, key_field, value_field=None):
+        def get_pairs():
+            for i in self.items:
+                key = i.get(key_field)
+                value = i if value_field is None else i.get(v)
+                yield key, value
+        return fx.PairsFlux(
+            get_pairs(),
+            count=self.count,
+            secondary=fx.FluxType.RecordsFlux if value_field is None else fx.FluxType.AnyFlux,
+        )
+
+    def to_dict(self, key_field, value_field=None, of_lists=False):
+        return self.to_pairs(
+            key_field,
+            value_field,
+        ).to_dict(
+            of_lists,
         )
