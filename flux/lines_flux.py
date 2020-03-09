@@ -1,3 +1,4 @@
+import json
 import csv
 
 try:
@@ -47,7 +48,12 @@ class LinesFlux(fx.AnyFlux):
     def valid_items(items, skip_errors=False):
         return check_lines(items, skip_errors)
 
-    # ...
+    def parse_json(self):
+        return self.to_records(
+            json.loads
+        ).set_count(
+            self.count,
+        )
 
     def save(self, filename, encoding=None, end='\n', verbose=True, immediately=False):
         def write_and_yield(fh, lines):
