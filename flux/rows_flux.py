@@ -15,7 +15,7 @@ def check_rows(rows, skip_errors=False):
         elif skip_errors:
             continue
         else:
-            raise TypeError('check_records(): this item is not record: {}'.format(i))
+            raise TypeError('check_records(): this item is not row: {}'.format(i))
         yield i
 
 
@@ -55,3 +55,13 @@ class RowsFlux(fx.AnyFlux):
             records,
             **self.meta()
         )
+
+    def schematize(self, schema, skip_errors=False):
+        return fx.SchemaFlux(
+            self.items,
+            **self.meta(),
+        ).schematize(
+            schema=schema,
+            skip_errors=skip_errors,
+        )
+

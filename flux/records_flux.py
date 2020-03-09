@@ -73,6 +73,15 @@ class RecordsFlux(fx.AnyFlux):
             self.count + (1 if add_title_row else 0),
         )
 
+    def schematize(self, schema, skip_errors=False):
+        return fx.SchemaFlux(
+            self.items,
+            **self.meta()
+        ).schematize(
+            schema=schema,
+            skip_errors=skip_errors,
+        )
+
     def to_pairs(self, key_field, value_field=None):
         def get_pairs():
             for i in self.items:

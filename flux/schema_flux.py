@@ -14,13 +14,16 @@ def is_row(row):
 
 def is_valid(row, schema):
     if is_row(row):
-        for value, description in zip(row, schema):
-            field_type = description[TYPE_POS]
-            if field_type in TYPES.values():
-                return isinstance(value, field_type)
-            elif field_type == TYPES.keys():
-                selected_type = TYPES[field_type]
-                return isinstance(value, selected_type)
+        if schema is not None:
+            for value, description in zip(row, schema):
+                field_type = description[TYPE_POS]
+                if field_type in TYPES.values():
+                    return isinstance(value, field_type)
+                elif field_type == TYPES.keys():
+                    selected_type = TYPES[field_type]
+                    return isinstance(value, selected_type)
+        else:
+            return True
 
 
 def check_rows(rows, schema, skip_errors=False):
@@ -87,7 +90,7 @@ class SchemaFlux(fx.RowsFlux):
             schema=schema,
         )
 
-    def apply_schema(self, schema, skip_errors=False):
+    def schematize(self, schema, skip_errors=False):
         def apply_schema_to_rows(rows):
             for r in rows:
                 if skip_errors:
