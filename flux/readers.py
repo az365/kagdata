@@ -77,3 +77,15 @@ def from_file(
     if skip_first_line:
         flux_from_file = flux_from_file.skip(1)
     return flux_from_file
+
+
+def from_parquet(parquet):
+    def get_records():
+        for n in range(parquet.num_rows):
+            yield parquet.slice(n, 1).to_pydict()
+    return fx.RecordsFlux(
+        items=get_records(),
+        count=parquet.num_rows,
+    ).map(
+        lambda r: {k: v[0] for k, v in r.items()}
+    )
