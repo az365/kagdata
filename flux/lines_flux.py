@@ -48,9 +48,17 @@ class LinesFlux(fx.AnyFlux):
     def valid_items(items, skip_errors=False):
         return check_lines(items, skip_errors)
 
-    def parse_json(self):
+    def parse_json(self, default_value=None):
+        def json_loads(line):
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError as err:
+                if default_value is not None:
+                    return default_value
+                else:
+                    raise json.JSONDecodeError(err.msg, err.doc, err.pos)
         return self.to_records(
-            json.loads
+            json_loads,
         ).set_count(
             self.count,
         )

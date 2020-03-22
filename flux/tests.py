@@ -213,6 +213,18 @@ def test_to_rows():
     assert received == expected
 
 
+def test_parse_json():
+    example = ['{"a": "b"}', 'abc', '{"d": "e"}']
+    expected = [{'a': 'b'}, {'err': 'err'}, {'d': 'e'}]
+    received = readers.from_list(
+        example,
+    ).to_lines(
+    ).parse_json(
+        default_value={'err': 'err'},
+    ).to_list()
+    assert received == expected
+
+
 if __name__ == '__main__':
     test_map()
     test_filter()
@@ -227,3 +239,4 @@ if __name__ == '__main__':
     test_split_by_pos()
     test_split_by_func()
     test_to_rows()
+    test_parse_json()
