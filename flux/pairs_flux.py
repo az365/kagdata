@@ -6,6 +6,9 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     import readers
 
 
+MAX_PAIRS_IN_MEMORY = 10000000
+
+
 def is_pair(row):
     if isinstance(row, (list, tuple)):
         return len(row) == 2
@@ -24,6 +27,29 @@ def check_pairs(pairs, skip_errors=False):
 
 def get_key(pair):
     return pair[0]
+
+
+def merge_iter(iterables, key_function=get_key):
+    iterators_count = len(iterables)
+    finished = [False] * iterators_count
+    take_next = [True] * iterators_count
+    item_from = [None] * iterators_count
+    key_from = [None] * iterators_count
+    while not min(finished):
+        for n in range(iterators_count):
+            if take_next[n] and not finished[n]:
+                try:
+                    item_from[n] = next(iterables[n])
+                    key_from[n] = key_function(item_from[n])
+                    take_next[n] = False
+                except StopIteration:
+                    finished[n] = True
+        if not min(finished):
+            min_key = min([k for f, k in zip(finished, key_from) if not f])
+            for n in range(iterators_count):
+                if key_from[n] == min_key and not finished[n]:
+                    yield item_from[n]
+                    take_next[n] = True
 
 
 class PairsFlux(fx.RowsFlux):
@@ -75,6 +101,32 @@ class PairsFlux(fx.RowsFlux):
         return PairsFlux(
             sorted_items,
             **self.meta()
+        )
+
+    def disk_sort_by_key(self, tmp_file_template='merge_sort_by_key_{}.tmp', step=MAX_PAIRS_IN_MEMORY):
+        flux_parts = self.to_records(
+            'key',
+            'value',
+        ).to_json(
+        ).split_on_disk_by_step(
+            step=step,
+            tmp_file_template=tmp_file_template,
+        )
+        assert flux_parts, 'flux must be non-empty'
+        iterables = [
+            f.parse_json(
+            ).to_pairs(
+                'key',
+                'value',
+            ).iterable() for f in flux_parts
+        ]
+        counts = [f.count for f in flux_parts]
+        props = self.meta()
+        props.pop('count')
+        return fx.PairsFlux(
+            merge_iter(iterables, get_key),
+            count=sum(counts),
+            **props
         )
 
     def sorted_group_by_keys(self):

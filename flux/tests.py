@@ -219,6 +219,18 @@ def test_split_on_disk_by_step():
     assert received == expected
 
 
+def test_disk_sort_by_key():
+    expected = [(k, str(k) * k) for k in range(1, 10)]
+    received = readers.from_list(
+        [(k, str(k) * k) for k in EXAMPLE_INT_SEQUENCE],
+    ).to_pairs(
+    ).disk_sort_by_key(
+        step=5,
+        tmp_file_template='test_disk_sort_by_key_{}.tmp',
+    ).to_list()
+    assert received == expected
+
+
 def test_sorted_group_by_keys():
     example = [
         (1, 11), (1, 12),
@@ -275,6 +287,7 @@ if __name__ == '__main__':
     test_split_by_pos()
     test_split_by_func()
     test_split_on_disk_by_step()
+    test_disk_sort_by_key()
     test_sorted_group_by_keys()
     test_to_rows()
     test_parse_json()
