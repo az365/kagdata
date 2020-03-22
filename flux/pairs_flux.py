@@ -22,6 +22,10 @@ def check_pairs(pairs, skip_errors=False):
         yield i
 
 
+def get_key(pair):
+    return pair[0]
+
+
 class PairsFlux(fx.RowsFlux):
     def __init__(self, items, count=None, check=True, secondary=None):
         super().__init__(
@@ -90,11 +94,12 @@ class PairsFlux(fx.RowsFlux):
 
     def keys(self):
         my_keys = list()
-        for k, v in self.items:
-            if k in my_keys:
+        for i in self.items:
+            key = get_key(i)
+            if key in my_keys:
                 pass
             else:
-                my_keys.append(k)
+                my_keys.append(key)
         return my_keys
 
     def extract_keys_in_memory(self):
