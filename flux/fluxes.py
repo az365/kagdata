@@ -20,19 +20,20 @@ class FluxType(Enum):
     AnyFlux = 'AnyFlux'
     LinesFlux = 'LinesFlux'
     RowsFlux = 'RowsFlux'
-    RecordsFlux = 'RecordsFlux'
+    PairsFlux = 'PairsFlux'
     SchemaFlux = 'SchemaFlux'
+    RecordsFlux = 'RecordsFlux'
 
 
 def get_class(flux_type):
     assert isinstance(flux_type, FluxType), TypeError('flux_type must be an instance of FluxType')
-    if flux_type == FluxType.SchemaFlux:
-        return SchemaFlux
+    if flux_type == FluxType.AnyFlux:
+        return AnyFlux
     elif flux_type == FluxType.LinesFlux:
         return LinesFlux
     elif flux_type == FluxType.RowsFlux:
         return RowsFlux
-    elif flux_type == FluxType.PairFlux:
+    elif flux_type == FluxType.PairsFlux:
         return PairsFlux
     elif flux_type == FluxType.SchemaFlux:
         return SchemaFlux
