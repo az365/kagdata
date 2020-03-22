@@ -86,7 +86,7 @@ class RecordsFlux(fx.AnyFlux):
         def get_pairs():
             for i in self.items:
                 key = i.get(key_field)
-                value = i if value_field is None else i.get(v)
+                value = i if value_field is None else i.get(value_field)
                 yield key, value
         return fx.PairsFlux(
             get_pairs(),
