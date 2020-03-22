@@ -73,6 +73,21 @@ class PairsFlux(fx.RowsFlux):
             **self.meta()
         )
 
+    def sorted_group_by_keys(self):
+        def get_groups():
+            accumulated = list()
+            prev_k = None
+            for k, v in self.items:
+                if (k != prev_k) and accumulated:
+                    yield prev_k, accumulated
+                    accumulated = list()
+                prev_k = k
+                accumulated.append(v)
+            yield k, accumulated
+        return fx.PairsFlux(
+            get_groups(),
+        )
+
     def keys(self):
         my_keys = list()
         for k, v in self.items:

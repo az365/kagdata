@@ -202,6 +202,25 @@ def test_split_by_func():
     assert received == expected
 
 
+def test_sorted_group_by_keys():
+    example = [
+        (1, 11), (1, 12),
+        (2, 21),
+        (3, 31), (3, 32), (3, 33),
+    ]
+    expected = [
+        (1, [11, 12]),
+        (2, [21]),
+        (3, [31, 32, 33]),
+    ]
+    received = readers.from_list(
+        example
+    ).to_pairs(
+    ).sorted_group_by_keys(
+    ).to_list()
+    assert received == expected
+
+
 def test_to_rows():
     expected = [['a', '1'], ['b', '2,22'], ['c', '3']]
     received = readers.from_list(
@@ -238,5 +257,6 @@ if __name__ == '__main__':
     test_separate_first()
     test_split_by_pos()
     test_split_by_func()
+    test_sorted_group_by_keys()
     test_to_rows()
     test_parse_json()
