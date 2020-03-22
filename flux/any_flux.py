@@ -311,6 +311,12 @@ class AnyFlux:
             count=self.count,
         )
 
+    def to_pairs(self, **kwargs):
+        return fx.PairsFlux(
+            self.items,
+            count=self.count,
+        )
+
     def to_records(self, function=lambda i: dict(item=i), **kwargs):
         return fx.RecordsFlux(
             items=map(function, self.items) if function else self.items,

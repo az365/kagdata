@@ -92,3 +92,11 @@ class LinesFlux(fx.AnyFlux):
             rows,
             self.count,
         )
+
+    def to_pairs(self, delimiter=None):
+        lines = self.items
+        rows = csv.reader(lines, delimiter=delimiter) if delimiter else csv.reader(lines)
+        return fx.RowsFlux(
+            rows,
+            self.count,
+        ).to_pairs()
