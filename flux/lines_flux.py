@@ -9,6 +9,9 @@ except ImportError:
     import readers
 
 
+MAX_LINES_IN_MEMORY = 10000000
+
+
 def is_line(line):
     return isinstance(line, str)
 
@@ -47,6 +50,34 @@ class LinesFlux(fx.AnyFlux):
     @staticmethod
     def valid_items(items, skip_errors=False):
         return check_lines(items, skip_errors)
+
+    def split_on_disk_by_step(
+            self,
+            tmp_file_template, encoding='utf8', end='\n',
+            step=MAX_LINES_IN_MEMORY,
+            return_names=False,
+    ):
+        part_no = None
+        fileholder = None
+        for n, i in enumerate(self.items):
+            if n % step == 0:
+                part_no = int(n / step)
+                if fileholder:
+                    fileholder.close()
+                filename = tmp_file_template.format(part_no)
+                fileholder = open(filename, mode='w', encoding=encoding)
+            elif end:
+                fileholder.write(end)
+            fileholder.write(str(i))
+        if part_no is not None:
+            fileholder.close()
+            names = [tmp_file_template.format(p) for p in range(part_no + 1)]
+            if return_names:
+                return names
+            else:
+                return [readers.from_file(fn, encoding) for fn in names]
+        else:
+            return list()
 
     def parse_json(self, default_value=None):
         def json_loads(line):
