@@ -37,7 +37,7 @@ class PairsFlux(fx.RowsFlux):
 
     def meta(self):
         return dict(
-            coout=self.count,
+            count=self.count,
             check=self.check,
             secondary=self.secondary,
         )
@@ -79,7 +79,7 @@ class PairsFlux(fx.RowsFlux):
             if k in my_keys:
                 pass
             else:
-                my_keys.append(i)
+                my_keys.append(k)
         return my_keys
 
     def extract_keys_in_memory(self):
@@ -110,12 +110,12 @@ class PairsFlux(fx.RowsFlux):
         result = dict()
         if of_lists:
             for k, v in self.items:
-                result[k] = v
-        else:
-            for k, v in self.items:
                 distinct = result.get(k, [])
                 if v not in distinct:
                     result[k] = distinct + [v]
+        else:
+            for k, v in self.items:
+                result[k] = v
         return result
 
     def to_records(self, key_field='key', value_field='value', **kwargs):
