@@ -113,7 +113,11 @@ class AnyFlux:
 
     def enumerate(self, native=False):
         props = self.meta()
-        target_class = fx.__class__ if native else fx.RowsFlux
+        if native:
+            target_class = self.__class__
+        else:
+            target_class = fx.PairsFlux
+            props['secondary'] = fx.FluxType(self.__class__.__name__)
         return target_class(
             items=self.enumerated_items(),
             **props
