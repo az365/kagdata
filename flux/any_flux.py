@@ -279,6 +279,17 @@ class AnyFlux:
         else:
             raise TypeError('split(by): by-argument must be int, list, tuple or function, {} received'.format(type(by)))
 
+    def memory_sort(self, key=lambda i: i, reverse=False):
+        sorted_items = sorted(
+            self.to_memory().items,
+            key=key,
+            reverse=reverse,
+        )
+        return self.__class__(
+            sorted_items,
+            **self.meta()
+        )
+
     def get_list(self):
         return list(self.items)
 

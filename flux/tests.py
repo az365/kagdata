@@ -219,6 +219,17 @@ def test_split_on_disk_by_step():
     assert received == expected
 
 
+def test_memory_sort():
+    expected = [7, 9, 8, 6, 5, 4, 3, 2, 1]
+    received = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).memory_sort(
+        key=lambda i: 777 if i == 7 else i,
+        reverse=True,
+    ).get_list()
+    assert received == expected
+
+
 def test_disk_sort_by_key():
     expected = [(k, str(k) * k) for k in range(1, 10)]
     received = readers.from_list(
@@ -287,6 +298,7 @@ if __name__ == '__main__':
     test_split_by_pos()
     test_split_by_func()
     test_split_on_disk_by_step()
+    test_memory_sort()
     test_disk_sort_by_key()
     test_sorted_group_by_keys()
     test_to_rows()
