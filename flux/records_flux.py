@@ -19,6 +19,46 @@ def check_records(records, skip_errors=False):
         yield r
 
 
+def process_selector_description(d):
+    if callable(d[0]):
+        function, inputs = d[0], d[1:]
+    elif callable(d[-1]):
+        inputs, function = d[:-1], d[-1]
+    else:
+        inputs, function = d, lambda *a: tuple(a)
+    return function, inputs
+
+
+def select_value(record, selector):
+    if callable(selector):
+        return selector(record)
+    elif isinstance(selector, (list, tuple)):
+        function, fields = process_selector_description(selector)
+        values = [record.get(f) for f in fields]
+        return function(*values)
+    else:
+        return record.get(selector)
+
+
+def select_fields(rec_in, *fields, **selectors):
+    rec_out = dict()
+    for f in fields:
+        if f == '*':
+            rec_out.update(rec_in)
+        elif isinstance(f, (list, tuple)) and len(f) > 1:
+            rec_out[f[0]] = select_value(rec_in, f[1:])
+        else:
+            rec_out[f] = rec_in.get(f)
+    for f, e in selectors.items():
+        if callable(e):
+            rec_out[f] = e(rec_in)
+        elif isinstance(e, (list, tuple)):
+            rec_out[f] = select_value(rec_in, e)
+        else:
+            rec_out[f] = rec_in.get(f)
+    return rec_out
+
+
 class RecordsFlux(fx.AnyFlux):
     def __init__(self, items, count=None, check=True):
         super().__init__(
@@ -53,6 +93,28 @@ class RecordsFlux(fx.AnyFlux):
             return check_records(self.items, skip_errors)
         else:
             return self.items
+
+    def select(self, *fields, **selectors):
+        return self.flat_map(
+            lambda r: select_fields(r, *fields, **selectors),
+        )
+
+    def filter(self, *fields):
+        def filter_function(r):
+            for f in fields:
+                if not select_value(r, f):
+                    return False
+            return True
+        props = self.meta()
+        props.pop('count')
+        filtered_items = filter(filter_function, self.items)
+        if self.is_in_memory():
+            filtered_items = list(filtered_items)
+            props['count'] = len(filtered_items)
+        return self.__class__(
+            filtered_items,
+            **props
+        )
 
     def to_lines(self, columns, add_title_row=False, delimiter='\t'):
         return fx.LinesFlux(
