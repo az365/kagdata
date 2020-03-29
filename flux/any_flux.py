@@ -141,10 +141,11 @@ class AnyFlux:
             for n, i in self.enumerated_items():
                 if n >= c:
                     yield i
+        next_items = self.items[count:] if self.is_in_memory() else skip_items(count)
         props = self.meta()
         props['count'] = self.count - count if self.count else None
         return self.__class__(
-            skip_items(count),
+            next_items,
             **props
         )
 
@@ -280,6 +281,9 @@ class AnyFlux:
 
     def get_list(self):
         return list(self.items)
+
+    def is_in_memory(self):
+        return isinstance(self.items, list)
 
     def to_memory(self):
         items_as_list_in_memory = self.get_list()
