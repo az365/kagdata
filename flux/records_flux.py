@@ -116,6 +116,20 @@ class RecordsFlux(fx.AnyFlux):
             **props
         )
 
+    def group_by(self, key, step=None, as_pairs=True, verbose=True):
+        sorted_fx = self.sort(
+            key,
+            step=step,
+            verbose=True
+        )
+        if as_pairs:
+            sorted_fx = sorted_fx.to_pairs(key)
+        grouped_fx = sorted_fx.sorted_group_by_key()
+        if as_pairs:
+            return grouped_fx
+        else:
+            return grouped_fx.values()
+
     def to_lines(self, columns, add_title_row=False, delimiter='\t'):
         return fx.LinesFlux(
             self.to_rows(columns, add_title_row=add_title_row),
