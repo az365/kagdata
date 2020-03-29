@@ -7,6 +7,9 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     import fluxes as fx
 
 
+MAX_ITEMS_IN_MEMORY = 5000000
+
+
 class AnyFlux:
     def __init__(self, items, count=None):
         self.items = items
@@ -126,9 +129,9 @@ class AnyFlux:
     def take(self, max_count=1):
         def take_items(m):
             for n, i in self.enumerated_items():
-                if n >= m:
-                    break
                 yield i
+                if n + 1 >= m:
+                    break
         props = self.meta()
         props['count'] = min(self.count, max_count) if self.count else None
         return self.__class__(
@@ -278,6 +281,33 @@ class AnyFlux:
                 return self.split_by_boolean(by)
         else:
             raise TypeError('split(by): by-argument must be int, list, tuple or function, {} received'.format(type(by)))
+
+    def split_to_disk_by_step(
+            self,
+            step=MAX_ITEMS_IN_MEMORY,
+            tmp_file_template='split_to_disk_by_step_{}.tmp', encoding='utf8',
+            sort_each_by=None, reverse=False,
+            verbose=True,
+    ):
+        count, total_fx = self.count, self
+        if count is None:
+            total_fn = tmp_file_template.format('total')
+            if verbose:
+                print('Calc count in {}'.format(total_fn))
+            count, total_fx = self.to_json().to_file(total_fn, encoding=encoding).map(json.loads).separate_count()
+        part_start, part_no, sorted_parts = 0, None, list()
+        while part_start < count:
+            part_no = int(part_start / step)
+            part_fn = tmp_file_template.format(part_no)
+            if verbose:
+                print('Sorting part {} and saving into {}'.format(part_no, part_fn))
+            part_fx = total_fx.take(step)
+            if sort_each_by is not None:
+                part_fx = part_fx.memory_sort(key=sort_each_by, reverse=reverse)
+            part_fx = part_fx.to_json().to_file(part_fn, encoding=encoding, verbose=verbose).map(json.loads)
+            sorted_parts.append(part_fx)
+            part_start = part_start + step
+        return sorted_parts
 
     def memory_sort(self, key=lambda i: i, reverse=False):
         sorted_items = sorted(

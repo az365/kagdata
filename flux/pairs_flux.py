@@ -104,22 +104,13 @@ class PairsFlux(fx.RowsFlux):
         )
 
     def disk_sort_by_key(self, tmp_file_template='merge_sort_by_key_{}.tmp', step=MAX_PAIRS_IN_MEMORY):
-        flux_parts = self.to_records(
-            'key',
-            'value',
-        ).to_json(
-        ).split_on_disk_by_step(
+        flux_parts = self.split_to_disk_by_step(
             step=step,
             tmp_file_template=tmp_file_template,
+            sort_each_by=get_key,
         )
         assert flux_parts, 'flux must be non-empty'
-        iterables = [
-            f.parse_json(
-            ).to_pairs(
-                'key',
-                'value',
-            ).iterable() for f in flux_parts
-        ]
+        iterables = [f.iterable() for f in flux_parts]
         counts = [f.count for f in flux_parts]
         props = self.meta()
         props.pop('count')
