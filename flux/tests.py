@@ -241,6 +241,18 @@ def test_disk_sort_by_key():
     assert received == expected
 
 
+def test_sort():
+    expected = list(reversed(range(1, 10)))
+    received = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).sort(
+        reverse=True,
+        step=4,
+        tmp_file_template='test_disk_sort_by_key_{}.tmp',
+    ).get_list()
+    assert received == expected
+
+
 def test_sorted_group_by_key():
     example = [
         (1, 11), (1, 12),
@@ -299,6 +311,7 @@ if __name__ == '__main__':
     test_split_to_disk_by_step()
     test_memory_sort()
     test_disk_sort_by_key()
+    test_sort()
     test_sorted_group_by_key()
     test_to_rows()
     test_parse_json()

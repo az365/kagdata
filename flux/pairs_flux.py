@@ -29,29 +29,6 @@ def get_key(pair):
     return pair[0]
 
 
-def merge_iter(iterables, key_function=get_key):
-    iterators_count = len(iterables)
-    finished = [False] * iterators_count
-    take_next = [True] * iterators_count
-    item_from = [None] * iterators_count
-    key_from = [None] * iterators_count
-    while not min(finished):
-        for n in range(iterators_count):
-            if take_next[n] and not finished[n]:
-                try:
-                    item_from[n] = next(iterables[n])
-                    key_from[n] = key_function(item_from[n])
-                    take_next[n] = False
-                except StopIteration:
-                    finished[n] = True
-        if not min(finished):
-            min_key = min([k for f, k in zip(finished, key_from) if not f])
-            for n in range(iterators_count):
-                if key_from[n] == min_key and not finished[n]:
-                    yield item_from[n]
-                    take_next[n] = True
-
-
 class PairsFlux(fx.RowsFlux):
     def __init__(self, items, count=None, check=True, secondary=None):
         super().__init__(
@@ -93,31 +70,18 @@ class PairsFlux(fx.RowsFlux):
             self.items,
         )
 
-    def memory_sort_by_key(self):
-        sorted_items = sorted(
-            self.to_memory().items,
-            key=lambda p: p[0],
-        )
-        return PairsFlux(
-            sorted_items,
-            **self.meta()
+    def memory_sort_by_key(self, reverse=False):
+        return self.memory_sort(
+            key=get_key,
+            reverse=reverse
         )
 
-    def disk_sort_by_key(self, tmp_file_template='merge_sort_by_key_{}.tmp', step=MAX_PAIRS_IN_MEMORY):
-        flux_parts = self.split_to_disk_by_step(
-            step=step,
+    def disk_sort_by_key(self, tmp_file_template='merge_sort_by_key_{}.tmp', step=MAX_PAIRS_IN_MEMORY, reverse=False):
+        return self.disk_sort(
+            key=get_key,
+            reverse=reverse,
             tmp_file_template=tmp_file_template,
-            sort_each_by=get_key,
-        )
-        assert flux_parts, 'flux must be non-empty'
-        iterables = [f.iterable() for f in flux_parts]
-        counts = [f.count for f in flux_parts]
-        props = self.meta()
-        props.pop('count')
-        return fx.PairsFlux(
-            merge_iter(iterables, get_key),
-            count=sum(counts),
-            **props
+            step=step,
         )
 
     def sorted_group_by_key(self):

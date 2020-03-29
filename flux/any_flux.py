@@ -10,6 +10,30 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
 MAX_ITEMS_IN_MEMORY = 5000000
 
 
+def merge_iter(iterables, key_function, reverse=False):
+    iterators_count = len(iterables)
+    finished = [False] * iterators_count
+    take_next = [True] * iterators_count
+    item_from = [None] * iterators_count
+    key_from = [None] * iterators_count
+    choice_function = max if reverse else min
+    while not min(finished):
+        for n in range(iterators_count):
+            if take_next[n] and not finished[n]:
+                try:
+                    item_from[n] = next(iterables[n])
+                    key_from[n] = key_function(item_from[n])
+                    take_next[n] = False
+                except StopIteration:
+                    finished[n] = True
+        if not min(finished):
+            chosen_key = choice_function([k for f, k in zip(finished, key_from) if not f])
+            for n in range(iterators_count):
+                if key_from[n] == chosen_key and not finished[n]:
+                    yield item_from[n]
+                    take_next[n] = True
+
+
 class AnyFlux:
     def __init__(self, items, count=None):
         self.items = items
@@ -319,6 +343,43 @@ class AnyFlux:
             sorted_items,
             **self.meta()
         )
+
+    def disk_sort(
+            self,
+            key=lambda i: i,
+            reverse=False,
+            step=MAX_ITEMS_IN_MEMORY,
+            tmp_file_template='merge_sort_{}.tmp', encoding='utf8',
+            verbose=False,
+    ):
+        flux_parts = self.split_to_disk_by_step(
+            step=step,
+            sort_each_by=key, reverse=reverse,
+            tmp_file_template=tmp_file_template, encoding=encoding,
+            verbose=verbose,
+        )
+        assert flux_parts, 'flux must be non-empty'
+        iterables = [f.iterable() for f in flux_parts]
+        counts = [f.count for f in flux_parts]
+        props = self.meta()
+        props['count'] = sum(counts)
+        if verbose:
+            print('Merging {} parts...'.format(len(iterables)))
+        return self.__class__(
+            merge_iter(iterables, key, reverse),
+            **props
+        )
+
+    def sort(
+            self,
+            key=lambda i: i, reverse=False,
+            step=MAX_ITEMS_IN_MEMORY, tmp_file_template='merge_sort_{}', encoding='utf8',
+            verbose=True,
+    ):
+        if self.is_in_memory() or (step is None) or (self.count is not None and self.count <= step):
+            return self.memory_sort(key, reverse)
+        else:
+            return self.disk_sort(key, reverse, step, tmp_file_template, encoding, verbose)
 
     def get_list(self):
         return list(self.items)
