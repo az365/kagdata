@@ -95,7 +95,7 @@ class PairsFlux(fx.RowsFlux):
 
     def memory_sort_by_key(self):
         sorted_items = sorted(
-            self.convert_to_list().items,
+            self.to_memory().items,
             key=lambda p: p[0],
         )
         return PairsFlux(

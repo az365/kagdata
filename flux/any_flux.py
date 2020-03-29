@@ -281,10 +281,15 @@ class AnyFlux:
     def get_list(self):
         return list(self.items)
 
-    def convert_to_list(self):
+    def to_memory(self):
+        items_as_list_in_memory = self.get_list()
+        props = self.meta()
+        props['count'] = len(items_as_list_in_memory)
+        if 'check' in props:
+            props['check'] = False
         return self.__class__(
-            self.get_list(),
-            **self.meta()
+            items_as_list_in_memory,
+            **props
         )
 
     def to_any(self):
