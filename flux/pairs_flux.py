@@ -120,7 +120,7 @@ class PairsFlux(fx.RowsFlux):
             **props
         )
 
-    def sorted_group_by_keys(self):
+    def sorted_group_by_key(self):
         def get_groups():
             accumulated = list()
             prev_k = None

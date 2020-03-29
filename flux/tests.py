@@ -241,7 +241,7 @@ def test_disk_sort_by_key():
     assert received == expected
 
 
-def test_sorted_group_by_keys():
+def test_sorted_group_by_key():
     example = [
         (1, 11), (1, 12),
         (2, 21),
@@ -255,7 +255,7 @@ def test_sorted_group_by_keys():
     received = readers.from_list(
         example
     ).to_pairs(
-    ).sorted_group_by_keys(
+    ).sorted_group_by_key(
     ).get_list()
     assert received == expected
 
@@ -299,6 +299,6 @@ if __name__ == '__main__':
     test_split_to_disk_by_step()
     test_memory_sort()
     test_disk_sort_by_key()
-    test_sorted_group_by_keys()
+    test_sorted_group_by_key()
     test_to_rows()
     test_parse_json()
