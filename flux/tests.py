@@ -19,7 +19,7 @@ def test_map():
         EXAMPLE_INT_SEQUENCE,
     ).map(
         lambda i: -i,
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 
@@ -29,7 +29,7 @@ def test_filter():
         EXAMPLE_INT_SEQUENCE,
     ).filter(
         lambda i: i > 5,
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 
@@ -39,7 +39,7 @@ def test_take():
         EXAMPLE_INT_SEQUENCE,
     ).take(
         5,
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 
@@ -49,7 +49,7 @@ def test_skip():
         EXAMPLE_INT_SEQUENCE,
     ).skip(
         5,
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 
@@ -63,7 +63,7 @@ def test_map_filter_take():
         lambda i: i % 2,
     ).take(
         3,
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 
@@ -71,7 +71,7 @@ def test_enumerated():
     expected = list(enumerate(EXAMPLE_INT_SEQUENCE))
     received = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
-    ).enumerate().to_list()
+    ).enumerate().get_list()
     assert received == expected
 
 
@@ -82,10 +82,10 @@ def test_save_and_read():
     ).to_lines(
     ).save(
         EXAMPLE_FILENAME,
-    ).to_list()
+    ).get_list()
     received_1 = readers.from_file(
         EXAMPLE_FILENAME
-    ).to_list()
+    ).get_list()
     assert received_0 == expected, 'test case 0'
     assert received_1 == expected, 'test case 1'
     readers.from_list(
@@ -96,7 +96,7 @@ def test_save_and_read():
     )
     received_2 = readers.from_file(
         EXAMPLE_FILENAME,
-    ).to_list()
+    ).get_list()
     assert received_2 == expected, 'test case 2'
 
 
@@ -108,27 +108,27 @@ def test_add():
         EXAMPLE_INT_SEQUENCE,
     ).add(
         addition
-    ).to_list()
+    ).get_list()
     assert received_1i == expected_1, 'test case 1i'
     received_2i = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).add(
         addition,
         before=True,
-    ).to_list()
+    ).get_list()
     assert received_2i == expected_2, 'test case 2i'
     received_1f = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).add(
         readers.from_list(addition),
-    ).to_list()
+    ).get_list()
     assert received_1f == expected_1, 'test case 1f'
     received_2f = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).add(
         readers.from_list(addition),
         before=True,
-    ).to_list()
+    ).get_list()
     assert received_2f == expected_2, 'test case 2f'
 
 
@@ -142,7 +142,7 @@ def test_add_records():
         lambda i: dict(item=i),
     ).add(
         readers.from_list(addition).to_records(),
-    ).to_list()
+    ).get_list()
     print(received_1)
     assert received_1 == expected_1, 'test case 1i'
     received_2 = readers.from_list(
@@ -151,7 +151,7 @@ def test_add_records():
     ).add(
         readers.from_list(addition).to_records(),
         before=True,
-    ).to_list()
+    ).get_list()
     print(received_2)
     assert received_2 == expected_2, 'test case 2i'
 
@@ -163,7 +163,7 @@ def test_separate_first():
             EXAMPLE_INT_SEQUENCE,
         ).separate_first()
     )
-    received[1] = received[1].to_list()
+    received[1] = received[1].get_list()
     assert received == expected
 
 
@@ -175,7 +175,7 @@ def test_split_by_pos():
     ).split(
         pos_1,
     )
-    received_1 = a.to_list(), b.to_list()
+    received_1 = a.get_list(), b.get_list()
     assert received_1 == expected_1, 'test case 1'
     expected_2 = (
         [pos_1] + EXAMPLE_INT_SEQUENCE[:pos_1],
@@ -187,7 +187,7 @@ def test_split_by_pos():
     ).split(
         (pos_1, pos_2),
     )
-    received_2 = a.count_to_items().to_list(), b.count_to_items().to_list(), c.count_to_items().to_list()
+    received_2 = a.count_to_items().get_list(), b.count_to_items().get_list(), c.count_to_items().get_list()
     assert received_2 == expected_2, 'test case 2'
 
 
@@ -198,7 +198,7 @@ def test_split_by_func():
     ).split(
         lambda i: i >= 5,
     )
-    received = a.to_list(), b.to_list()
+    received = a.get_list(), b.get_list()
     assert received == expected
 
 
@@ -215,7 +215,7 @@ def test_split_on_disk_by_step():
         step=4,
         tmp_file_template='test_split_by_step_{}.tmp',
     )
-    received = [f.to_list() for f in split]
+    received = [f.get_list() for f in split]
     assert received == expected
 
 
@@ -227,7 +227,7 @@ def test_disk_sort_by_key():
     ).disk_sort_by_key(
         step=5,
         tmp_file_template='test_disk_sort_by_key_{}.tmp',
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 
@@ -246,7 +246,7 @@ def test_sorted_group_by_keys():
         example
     ).to_pairs(
     ).sorted_group_by_keys(
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 
@@ -257,7 +257,7 @@ def test_to_rows():
     ).to_lines(
     ).to_rows(
         ',',
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 
@@ -269,7 +269,7 @@ def test_parse_json():
     ).to_lines(
     ).parse_json(
         default_value={'err': 'err'},
-    ).to_list()
+    ).get_list()
     assert received == expected
 
 

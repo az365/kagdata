@@ -278,12 +278,12 @@ class AnyFlux:
         else:
             raise TypeError('split(by): by-argument must be int, list, tuple or function, {} received'.format(type(by)))
 
-    def to_list(self):
+    def get_list(self):
         return list(self.items)
 
     def convert_to_list(self):
         return self.__class__(
-            self.to_list(),
+            self.get_list(),
             **self.meta()
         )
 
