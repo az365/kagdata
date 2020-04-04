@@ -113,10 +113,14 @@ class AnyFlux:
         )
 
     def apply(self, function, native=True, save_count=False):
-        target_class = self.__class__ if native else AnyFlux
-        props = self.meta()
-        if not save_count:
-            props.pop('count')
+        if native:
+            target_class = self.__class__
+            props = self.meta()
+            if not save_count:
+                props.pop('count')
+        else:
+            target_class = AnyFlux
+            props = dict(count=self.count) if save_count else dict()
         return target_class(
             function(self.items),
             **props
