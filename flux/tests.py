@@ -1,6 +1,8 @@
 try:  # Assume we're a sub-module in a package.
+    from . import fluxes as fx
     from . import readers
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
+    import fluxes as fx
     import readers
 
 
@@ -14,13 +16,37 @@ EXAMPLE_CSV_ROWS = [
 
 
 def test_map():
-    expected = [-i for i in EXAMPLE_INT_SEQUENCE]
-    received = readers.from_list(
+    expected_0 = [-i for i in EXAMPLE_INT_SEQUENCE]
+    received_0 = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).map(
         lambda i: -i,
     ).get_list()
-    assert received == expected
+    assert received_0 == expected_0, 'test case 0'
+    expected_1 = [str(-i) for i in EXAMPLE_INT_SEQUENCE]
+    received_1 = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).map(
+        lambda i: str(-i),
+        to=fx.LinesFlux,
+    ).get_list()
+    assert received_1 == expected_1, 'test case 1'
+    expected_2 = [str(-i) for i in EXAMPLE_INT_SEQUENCE]
+    received_2 = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).map(
+        lambda i: str(-i),
+        to=fx.FluxType.LinesFlux,
+    ).get_list()
+    assert received_2 == expected_2, 'test case 2'
+    expected_3 = [str(-i) for i in EXAMPLE_INT_SEQUENCE]
+    received_3 = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).map(
+        lambda i: str(-i),
+        to='LinesFlux',
+    ).get_list()
+    assert received_3 == expected_3, 'test case 3'
 
 
 def test_filter():
@@ -57,7 +83,7 @@ def test_map_filter_take():
     expected = [-1, -3, -5]
     received = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
-    ).flat_map(
+    ).native_map(
         lambda i: -i,
     ).filter(
         lambda i: i % 2,
@@ -138,7 +164,7 @@ def test_add_records():
     expected_2 = list(map(lambda v: dict(item=v), addition + EXAMPLE_INT_SEQUENCE))
     received_1 = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
-    ).to_records(
+    ).map_to_records(
         lambda i: dict(item=i),
     ).add(
         readers.from_list(addition).to_records(),

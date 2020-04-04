@@ -145,12 +145,8 @@ class PairsFlux(fx.RowsFlux):
                 result[k] = v
         return result
 
-    def to_records(self, key_field='key', value_field='value', **kwargs):
-        records = map(
-            lambda i: {key_field: i[0], value_field: i[1]},
-            self.items,
-        )
-        return fx.RecordsFlux(
-            records,
-            count=self.count,
+    def to_records(self, key='key', value='value', **kwargs):
+        function = kwargs.get('function') or (lambda i: {key: i[0], value: i[1]})
+        return self.map_to_records(
+            function,
         )

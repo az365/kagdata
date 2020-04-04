@@ -107,7 +107,7 @@ class RecordsFlux(fx.AnyFlux):
         )
 
     def select(self, *fields, **selectors):
-        return self.flat_map(
+        return self.native_map(
             lambda r: select_fields(r, *fields, **selectors),
         )
 

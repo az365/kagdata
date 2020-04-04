@@ -1,4 +1,5 @@
 from itertools import chain, tee
+import inspect
 import json
 
 try:  # Assume we're a sub-module in a package.
@@ -126,16 +127,46 @@ class AnyFlux:
             **props
         )
 
-    def flat_map(self, function):
+    def map(self, function=lambda i: i, to=None):
+        if to is None:
+            fx_class = self.__class__
+        elif isinstance(to, (fx.FluxType, str)):
+            # fx_class = fx.get_class(to)
+            # fx_class = fx.get_class(fx.FluxType)
+            fx_class = fx.get_class(fx.FluxType(to))
+        elif inspect.isclass(to):
+            fx_class = to
+        else:
+            raise TypeError('to parameter must be class or FluxType (got {})'.format(type(to)))
+        new_props_keys = fx_class([]).meta().keys()
+        props = {k: v for k, v in self.meta().items() if k in new_props_keys}
+        return fx_class(
+            map(function, self.items),
+            **props
+        )
+
+    def native_map(self, function):
         return self.__class__(
             map(function, self.items),
             self.count,
         )
 
-    def map(self, function):
+    def map_to_any(self, function):
         return AnyFlux(
             map(function, self.items),
             self.count,
+        )
+
+    def map_to_records(self, function):
+        def get_record(i):
+            if function is None:
+                return i if isinstance(i, dict) else dict(item=i)
+            else:
+                return function(i)
+        return fx.RecordsFlux(
+            map(get_record, self.items),
+            count=self.count,
+            check=True,
         )
 
     def filter(self, function):
@@ -330,7 +361,7 @@ class AnyFlux:
             total_fn = tmp_file_template.format('total')
             if verbose:
                 print('Calc count in {}'.format(total_fn))
-            count, total_fx = self.to_json().to_file(total_fn, encoding=encoding).map(json.loads).separate_count()
+            count, total_fx = self.to_json().to_file(total_fn, encoding=encoding).map_to_any(json.loads).separate_count()
         part_start, part_no, sorted_parts = 0, None, list()
         while part_start < count:
             part_no = int(part_start / step)
@@ -340,7 +371,7 @@ class AnyFlux:
             part_fx = total_fx.take(step)
             if sort_each_by is not None:
                 part_fx = part_fx.memory_sort(key=sort_each_by, reverse=reverse)
-            part_fx = part_fx.to_json().to_file(part_fn, encoding=encoding, verbose=verbose).map(json.loads)
+            part_fx = part_fx.to_json().to_file(part_fn, encoding=encoding, verbose=verbose).map_to_any(json.loads)
             sorted_parts.append(part_fx)
             part_start = part_start + step
         return sorted_parts
@@ -418,13 +449,13 @@ class AnyFlux:
 
     def to_lines(self, **kwargs):
         return fx.LinesFlux(
-            self.map(str).items,
+            self.map_to_any(str).items,
             count=self.count,
             check=True,
         )
 
     def to_json(self, **kwargs):
-        return self.map(
+        return self.map_to_any(
             json.dumps
         ).to_lines()
 
@@ -440,9 +471,6 @@ class AnyFlux:
             count=self.count,
         )
 
-    def to_records(self, function=lambda i: dict(item=i), **kwargs):
-        return fx.RecordsFlux(
-            items=map(function, self.items) if function else self.items,
-            count=self.count,
-            check=True,
-        )
+    def to_records(self, **kwargs):
+        function = kwargs.get('function')
+        return self.map_to_records(function)

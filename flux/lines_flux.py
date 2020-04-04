@@ -23,7 +23,7 @@ def check_lines(lines, skip_errors=False):
         elif skip_errors:
             continue
         else:
-            raise TypeError('check_records(): this item is not record: {}'.format(i))
+            raise TypeError('check_lines(): this item is not a line: {}'.format(i))
         yield i
 
 
@@ -60,7 +60,7 @@ class LinesFlux(fx.AnyFlux):
                     return default_value
                 else:
                     raise json.JSONDecodeError(err.msg, err.doc, err.pos)
-        return self.to_records(
+        return self.map_to_records(
             json_loads,
         ).set_count(
             self.count,
