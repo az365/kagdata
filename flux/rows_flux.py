@@ -65,3 +65,8 @@ class RowsFlux(fx.AnyFlux):
             skip_errors=skip_errors,
         )
 
+    def to_lines(self, delimiter='\t'):
+        return fx.LinesFlux(
+            map(lambda r: '\t'.join([str(c) for c in r]), self.items),
+            count=self.count,
+        )
