@@ -87,9 +87,11 @@ class AnyFlux:
         return result
 
     def set_count(self, count):
+        props = self.meta()
+        props['count'] = count
         return self.__class__(
             self.items,
-            **self.meta()
+            **props
         )
 
     def tee(self, n=2):

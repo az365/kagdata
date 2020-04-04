@@ -81,13 +81,6 @@ class RecordsFlux(fx.AnyFlux):
     def valid_items(items, skip_errors=False):
         return check_records(items, skip_errors)
 
-    def set_count(self, count):
-        return RecordsFlux(
-            self.items,
-            count=count,
-            check=False,
-        )
-
     def get_records(self, skip_errors=False, raise_errors=True):
         if skip_errors or raise_errors:
             return check_records(self.items, skip_errors)
