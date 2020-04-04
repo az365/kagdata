@@ -474,3 +474,11 @@ class AnyFlux:
     def to_records(self, **kwargs):
         function = kwargs.get('function')
         return self.map_to_records(function)
+
+    def show(self, count=3):
+        print(self.class_name(), self.meta(), '\n')
+        if self.is_in_memory():
+            for i in self.items[:count]:
+                print(i)
+        else:
+            print(self.one())
