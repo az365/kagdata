@@ -45,3 +45,11 @@ def union_duplicate_fields(record, list_duplicate_fields=(('a1', 'a2'), ('b1', '
             for field in duplicate_fields_group[1:]:
                 record.pop(field, None)
     return record
+
+
+def transpose_records_list(records_list):
+    record_out = dict()
+    for r in records_list:
+        for k, v in r.items():
+            record_out[k] = record_out.get(k, []) + [v]
+    yield record_out
