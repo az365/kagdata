@@ -94,6 +94,25 @@ class RecordsFlux(fx.AnyFlux):
         else:
             return self.items
 
+    def enumerated_records(self, field='#', first=1):
+        for n, r in enumerate(self.items):
+            r[field] = n + first
+            yield r
+
+    def enumerate(self, native=False):
+        props = self.meta()
+        if native:
+            target_class = self.__class__
+            enumerated = self.enumerated_records()
+        else:
+            target_class = fx.PairsFlux
+            enumerated = self.enumerated_items()
+            props['secondary'] = fx.FluxType(self.class_name())
+        return target_class(
+            items=enumerated,
+            **props
+        )
+
     def select(self, *fields, **selectors):
         return self.flat_map(
             lambda r: select_fields(r, *fields, **selectors),
@@ -120,7 +139,7 @@ class RecordsFlux(fx.AnyFlux):
         sorted_fx = self.sort(
             key,
             step=step,
-            verbose=True
+            verbose=verbose,
         )
         if as_pairs:
             sorted_fx = sorted_fx.to_pairs(key)
