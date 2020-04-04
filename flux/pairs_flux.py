@@ -101,6 +101,9 @@ class PairsFlux(fx.RowsFlux):
             get_groups(),
         )
 
+    def values(self):
+        return self.secondary_flux()
+
     def keys(self):
         my_keys = list()
         for i in self.items:
