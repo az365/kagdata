@@ -43,3 +43,15 @@ def get_class(flux_type):
         return RecordsFlux
 
 
+def is_flux(obj):
+    return isinstance(
+        obj,
+        (AnyFlux, LinesFlux, RowsFlux, PairsFlux, SchemaFlux, RecordsFlux),
+    )
+
+
+def concat(list_fluxes):
+    result = list_fluxes[0]
+    for cur_flux in list_fluxes[1:]:
+        result = result.add_flux(cur_flux)
+    return result
