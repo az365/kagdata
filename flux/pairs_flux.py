@@ -64,10 +64,12 @@ class PairsFlux(fx.RowsFlux):
         return self.secondary
 
     def secondary_flux(self):
-        return fx.get_class(
-            self.secondary,
-        ).__init__(
-            self.items,
+        def get_values():
+            for i in self.items:
+                yield i[1]
+        return fx.get_class(self.secondary)(
+            list(get_values()) if self.is_in_memory() else get_values(),
+            count=self.count,
         )
 
     def memory_sort_by_key(self, reverse=False):
@@ -94,7 +96,7 @@ class PairsFlux(fx.RowsFlux):
                     accumulated = list()
                 prev_k = k
                 accumulated.append(v)
-            yield k, accumulated
+            yield prev_k, accumulated
         return fx.PairsFlux(
             get_groups(),
         )
