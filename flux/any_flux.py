@@ -44,6 +44,12 @@ class AnyFlux:
             count=self.count,
         )
 
+    def class_name(self):
+        return self.__class__.__name__
+
+    def flux_type(self):
+        return fx.get_class(self.class_name())
+
     @staticmethod
     def is_valid_item(item):
         return True
@@ -144,7 +150,7 @@ class AnyFlux:
             target_class = self.__class__
         else:
             target_class = fx.PairsFlux
-            props['secondary'] = fx.FluxType(self.__class__.__name__)
+            props['secondary'] = fx.FluxType(self.class_name())
         return target_class(
             items=self.enumerated_items(),
             **props
