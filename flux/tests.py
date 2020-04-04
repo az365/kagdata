@@ -93,6 +93,28 @@ def test_map_filter_take():
     assert received == expected
 
 
+def test_select():
+    expected = [
+        {'a': '1', 'd': None, 'e': None, 'f': '11'},
+        {'a': None, 'd': None, 'e': None, 'f': 'NoneNone'},
+        {'a': None, 'd': None, 'e': '3', 'f': 'NoneNone'},
+    ]
+    received = readers.from_list(
+        EXAMPLE_CSV_ROWS,
+    ).to_lines(
+    ).to_rows(
+        delimiter=',',
+    ).map_to_records(
+        lambda p: {p[0]: p[1]},
+    ).select(
+        'a',
+        d='b',
+        e=lambda r: r.get('c'),
+        f=('a', lambda v: str(v)*2),
+    ).get_list()
+    assert received == expected
+
+
 def test_enumerated():
     expected = list(enumerate(EXAMPLE_INT_SEQUENCE))
     received = readers.from_list(

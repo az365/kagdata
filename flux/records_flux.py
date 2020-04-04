@@ -170,16 +170,16 @@ class RecordsFlux(fx.AnyFlux):
             skip_errors=skip_errors,
         )
 
-    def to_pairs(self, key_field, value_field=None):
+    def to_pairs(self, key, value=None):
         def get_pairs():
             for i in self.items:
-                key = i.get(key_field)
-                value = i if value_field is None else i.get(value_field)
-                yield key, value
+                k = select_value(i, key)
+                v = i if value is None else select_value(i, value)
+                yield k, v
         return fx.PairsFlux(
-            get_pairs(),
+            list(get_pairs()) if self.is_in_memory() else get_pairs(),
             count=self.count,
-            secondary=fx.FluxType.RecordsFlux if value_field is None else fx.FluxType.AnyFlux,
+            secondary=fx.FluxType.RecordsFlux if value is None else fx.FluxType.AnyFlux,
         )
 
     def to_dict(self, key_field, value_field=None, of_lists=False):
