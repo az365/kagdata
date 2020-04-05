@@ -19,6 +19,22 @@ def check_records(records, skip_errors=False):
         yield r
 
 
+def sort_by_dependencies(selectors):
+    ordered_fields = list()
+    for field, description in selectors.items():
+        f_pos = 0
+        if not callable(description):
+            _, dependencies = fx.process_selector_description(description)
+            for d in dependencies:
+                if d in ordered_fields:
+                    d_pos = ordered_fields.index(d)
+                    if d_pos >= f_pos:
+                        f_pos = d_pos + 1
+        ordered_fields.insert(f_pos, field)
+    print('ordered_fields:', ordered_fields)
+    return [(f, selectors[f]) for f in ordered_fields]
+
+
 def select_value(record, description):
     if callable(description):
         return description(record)
@@ -30,18 +46,25 @@ def select_value(record, description):
         return record.get(description)
 
 
-def select_fields(rec_in, *fields, **selectors):
-    rec_out = dict()
-    for f in fields:
-        if f == '*':
-            rec_out.update(rec_in)
-        elif isinstance(f, (list, tuple)) and len(f) > 1:
-            rec_out[f[0]] = select_value(rec_in, f[1:])
+def select_fields(rec_in, *descriptions):
+    record = rec_in.copy()
+    fields_out = list()
+    for desc in descriptions:
+        if desc == '*':
+            fields_out.append(rec_in.keys())
+        elif isinstance(desc, (list, tuple)):
+            if len(desc) > 1:
+                f_out = desc[0]
+                fs_in = desc[1] if len(desc) == 2 else desc[1:]
+                record[f_out] = select_value(record, fs_in)
+                fields_out.append(f_out)
+            else:
+                raise ValueError('incorrect selector: {}'.format(desc))
         else:
-            rec_out[f] = rec_in.get(f)
-    for f, d in selectors.items():
-        rec_out[f] = select_value(rec_in, d)
-    return rec_out
+            if desc not in record:
+                record[desc] = None
+            fields_out.append(desc)
+    return {f: record[f] for f in fields_out}
 
 
 class RecordsFlux(fx.AnyFlux):
@@ -92,8 +115,15 @@ class RecordsFlux(fx.AnyFlux):
         )
 
     def select(self, *fields, **selectors):
+        descriptions = list(fields)
+        for k, v in sort_by_dependencies(selectors):
+            if isinstance(v, (list, tuple)):
+                descriptions.append([k] + list(v)),
+            else:
+                descriptions.append([k] + [v])
+        print('select(descriptions=', descriptions, ')')
         return self.native_map(
-            lambda r: select_fields(r, *fields, **selectors),
+            lambda r: select_fields(r, *descriptions),
         )
 
     def filter(self, *fields):

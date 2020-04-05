@@ -96,9 +96,9 @@ def test_map_filter_take():
 
 def test_select():
     expected_1 = [
-        {'a': '1', 'd': None, 'e': None, 'f': '11'},
-        {'a': None, 'd': '2,22', 'e': None, 'f': 'NoneNone'},
-        {'a': None, 'd': None, 'e': '3', 'f': 'NoneNone'},
+        {'a': '1', 'd': None, 'e': None, 'f': '11', 'g': None, 'h': None},
+        {'a': None, 'd': '2,22', 'e': None, 'f': 'NoneNone', 'g': None, 'h': None},
+        {'a': None, 'd': None, 'e': '3', 'f': 'NoneNone', 'g': '3', 'h': '3'},
     ]
     received_1 = readers.from_list(
         EXAMPLE_CSV_ROWS,
@@ -109,6 +109,8 @@ def test_select():
         lambda p: {p[0]: p[1]},
     ).select(
         'a',
+        h='g',
+        g='e',
         d='b',
         e=lambda r: r.get('c'),
         f=('a', lambda v: str(v)*2),
