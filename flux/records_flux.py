@@ -67,6 +67,16 @@ def select_fields(rec_in, *descriptions):
     return {f: record[f] for f in fields_out}
 
 
+def get_key_function(descriptions):
+    if len(descriptions) == 0:
+        raise ValueError('key must be defined')
+    elif len(descriptions) == 1:
+        key_function = lambda r: select_value(r, descriptions[0])
+    else:
+        key_function = lambda r: tuple([select_value(r, d) for d in descriptions])
+    return key_function
+
+
 class RecordsFlux(fx.AnyFlux):
     def __init__(self, items, count=None, check=True):
         super().__init__(
@@ -143,14 +153,29 @@ class RecordsFlux(fx.AnyFlux):
             **props
         )
 
-    def group_by(self, key, step=None, as_pairs=True, verbose=True):
+    def sort(
+            self,
+            *keys,
+            reverse=False,
+            step=fx.MAX_ITEMS_IN_MEMORY, tmp_file_template='merge_sort_{}', encoding='utf8',
+            verbose=True,
+    ):
+        key_function = get_key_function(keys)
+        if self.is_in_memory() or (step is None) or (self.count is not None and self.count <= step):
+            return self.memory_sort(key_function, reverse)
+        else:
+            return self.disk_sort(key_function, reverse, step, tmp_file_template, encoding, verbose)
+
+    def group_by(self, *keys, step=None, as_pairs=True, verbose=True):
         sorted_fx = self.sort(
-            key,
+            *keys,
             step=step,
             verbose=verbose,
         )
         if as_pairs:
-            sorted_fx = sorted_fx.to_pairs(key)
+            sorted_fx = sorted_fx.to_pairs(
+                key=get_key_function(keys),
+            )
         grouped_fx = sorted_fx.sorted_group_by_key()
         if as_pairs:
             return grouped_fx
