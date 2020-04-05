@@ -312,15 +312,37 @@ def test_disk_sort_by_key():
 
 
 def test_sort():
-    expected = list(reversed(range(1, 10)))
-    received = readers.from_list(
+    expected_0 = list(reversed(range(1, 10)))
+    received_0 = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).sort(
         reverse=True,
         step=4,
         tmp_file_template='test_disk_sort_by_key_{}.tmp',
     ).get_list()
-    assert received == expected
+    assert received_0 == expected_0, 'test case 0'
+    expected_1 = list(reversed(range(1, 10)))
+    received_1 = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).sort(
+        lambda i: -i,
+        reverse=False,
+        step=4,
+        tmp_file_template='test_disk_sort_by_key_{}.tmp',
+    ).get_list()
+    assert received_1 == expected_1, 'test case 1'
+    expected_2 = list(reversed(range(1, 10)))
+    received_2 = readers.from_list(
+        EXAMPLE_INT_SEQUENCE,
+    ).sort(
+        lambda i: 100,
+        lambda i: -i,
+        lambda i: i,
+        reverse=False,
+        step=4,
+        tmp_file_template='test_disk_sort_by_key_{}.tmp',
+    ).get_list()
+    assert received_2 == expected_2, 'test case 2'
 
 
 def test_sorted_group_by_key():

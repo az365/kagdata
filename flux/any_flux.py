@@ -424,10 +424,17 @@ class AnyFlux:
 
     def sort(
             self,
-            key=lambda i: i, reverse=False,
+            *keys,
+            reverse=False,
             step=MAX_ITEMS_IN_MEMORY, tmp_file_template='merge_sort_{}', encoding='utf8',
             verbose=True,
     ):
+        if len(keys) == 0:
+            key = lambda i: i
+        elif len(keys) == 1:
+            key = keys[0]
+        else:
+            key = lambda i: tuple([f(i) for f in keys])
         if self.is_in_memory() or (step is None) or (self.count is not None and self.count <= step):
             return self.memory_sort(key, reverse)
         else:
