@@ -19,6 +19,34 @@ def check_rows(rows, skip_errors=False):
         yield i
 
 
+def select_value(row, description):
+    if callable(description):
+        return description(row)
+    elif isinstance(description, (list, tuple)):
+        function, columns = fx.process_selector_description(description)
+        values = [row[f] for f in columns]
+        return function(*values)
+    elif isinstance(description, int):
+        return row[description]
+    else:
+        raise TypeError('selector description must be int, callable or tuple ({} as {} given)'.format(
+            description, type(description)
+        ))
+
+
+def select_columns(row_in, *columns):
+    row_out = [None] * len(columns)
+    c = 0
+    for d in columns:
+        if d == '*':
+            row_out = row_out[:c] + list(row_in) + row_out[c + 1:]
+            c += len(row_in)
+        else:
+            row_out[c] = select_value(row_in, d)
+            c += 1
+    return tuple(row_out)
+
+
 class RowsFlux(fx.AnyFlux):
     def __init__(self, items, count=None, check=True):
         super().__init__(
@@ -40,6 +68,11 @@ class RowsFlux(fx.AnyFlux):
     @staticmethod
     def valid_items(items, skip_errors=False):
         return check_rows(items, skip_errors)
+
+    def select(self, *columns):
+        return self.native_map(
+            lambda r: select_columns(r, *columns),
+        )
 
     def to_records(self, function=None, columns=[]):
         def get_records(rows, cols):

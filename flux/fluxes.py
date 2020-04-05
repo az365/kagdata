@@ -55,3 +55,14 @@ def concat(list_fluxes):
     for cur_flux in list_fluxes[1:]:
         result = result.add_flux(cur_flux)
     return result
+
+
+def process_selector_description(d):
+    if callable(d[0]):
+        function, inputs = d[0], d[1:]
+    elif callable(d[-1]):
+        inputs, function = d[:-1], d[-1]
+    else:
+        inputs, function = d, lambda *a: tuple(a)
+    return function, inputs
+

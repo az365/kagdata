@@ -19,25 +19,15 @@ def check_records(records, skip_errors=False):
         yield r
 
 
-def process_selector_description(d):
-    if callable(d[0]):
-        function, inputs = d[0], d[1:]
-    elif callable(d[-1]):
-        inputs, function = d[:-1], d[-1]
-    else:
-        inputs, function = d, lambda *a: tuple(a)
-    return function, inputs
-
-
-def select_value(record, selector):
-    if callable(selector):
-        return selector(record)
-    elif isinstance(selector, (list, tuple)):
-        function, fields = process_selector_description(selector)
+def select_value(record, description):
+    if callable(description):
+        return description(record)
+    elif isinstance(description, (list, tuple)):
+        function, fields = fx.process_selector_description(description)
         values = [record.get(f) for f in fields]
         return function(*values)
     else:
-        return record.get(selector)
+        return record.get(description)
 
 
 def select_fields(rec_in, *fields, **selectors):
@@ -49,13 +39,8 @@ def select_fields(rec_in, *fields, **selectors):
             rec_out[f[0]] = select_value(rec_in, f[1:])
         else:
             rec_out[f] = rec_in.get(f)
-    for f, e in selectors.items():
-        if callable(e):
-            rec_out[f] = e(rec_in)
-        elif isinstance(e, (list, tuple)):
-            rec_out[f] = select_value(rec_in, e)
-        else:
-            rec_out[f] = rec_in.get(f)
+    for f, d in selectors.items():
+        rec_out[f] = select_value(rec_in, d)
     return rec_out
 
 

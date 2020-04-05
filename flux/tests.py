@@ -95,12 +95,12 @@ def test_map_filter_take():
 
 
 def test_select():
-    expected = [
+    expected_1 = [
         {'a': '1', 'd': None, 'e': None, 'f': '11'},
-        {'a': None, 'd': None, 'e': None, 'f': 'NoneNone'},
+        {'a': None, 'd': '2,22', 'e': None, 'f': 'NoneNone'},
         {'a': None, 'd': None, 'e': '3', 'f': 'NoneNone'},
     ]
-    received = readers.from_list(
+    received_1 = readers.from_list(
         EXAMPLE_CSV_ROWS,
     ).to_lines(
     ).to_rows(
@@ -113,7 +113,26 @@ def test_select():
         e=lambda r: r.get('c'),
         f=('a', lambda v: str(v)*2),
     ).get_list()
-    assert received == expected
+    assert received_1 == expected_1, 'test case 1: records'
+    expected_2 = [
+        (1.00, 'a', '1', 'a'),
+        (2.22, 'b', '2.22', 'b'),
+        (3.00, 'c', '3', 'c'),
+    ]
+    received_2 = readers.from_list(
+        EXAMPLE_CSV_ROWS,
+    ).to_lines(
+    ).to_rows(
+        delimiter=',',
+    ).select(
+        0,
+        lambda s: s[1].replace(',', '.'),
+    ).select(
+        (float, 1),
+        '*',
+        0,
+    ).get_list()
+    assert received_2 == expected_2, 'test case 2: rows'
 
 
 def test_enumerated():
