@@ -6,9 +6,6 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     import readers
 
 
-MAX_PAIRS_IN_MEMORY = 10000000
-
-
 def is_pair(row):
     if isinstance(row, (list, tuple)):
         return len(row) == 2
@@ -78,7 +75,12 @@ class PairsFlux(fx.RowsFlux):
             reverse=reverse
         )
 
-    def disk_sort_by_key(self, tmp_file_template='merge_sort_by_key_{}.tmp', step=MAX_PAIRS_IN_MEMORY, reverse=False):
+    def disk_sort_by_key(
+            self,
+            reverse=False,
+            step=fx.MAX_ITEMS_IN_MEMORY,
+            tmp_file_template='merge_sort_by_key_{}.tmp',
+    ):
         return self.disk_sort(
             key=get_key,
             reverse=reverse,

@@ -9,9 +9,6 @@ except ImportError:
     import readers
 
 
-MAX_LINES_IN_MEMORY = 10000000
-
-
 def is_line(line):
     return isinstance(line, str)
 

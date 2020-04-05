@@ -8,9 +8,6 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     import fluxes as fx
 
 
-MAX_ITEMS_IN_MEMORY = 5000000
-
-
 def merge_iter(iterables, key_function, reverse=False):
     iterators_count = len(iterables)
     finished = [False] * iterators_count
@@ -360,7 +357,7 @@ class AnyFlux:
 
     def split_to_disk_by_step(
             self,
-            step=MAX_ITEMS_IN_MEMORY,
+            step=fx.MAX_ITEMS_IN_MEMORY,
             tmp_file_template='split_to_disk_by_step_{}.tmp', encoding='utf8',
             sort_each_by=None, reverse=False,
             verbose=True,
@@ -400,7 +397,7 @@ class AnyFlux:
             self,
             key=lambda i: i,
             reverse=False,
-            step=MAX_ITEMS_IN_MEMORY,
+            step=fx.MAX_ITEMS_IN_MEMORY,
             tmp_file_template='merge_sort_{}.tmp', encoding='utf8',
             verbose=False,
     ):
@@ -426,7 +423,7 @@ class AnyFlux:
             self,
             *keys,
             reverse=False,
-            step=MAX_ITEMS_IN_MEMORY, tmp_file_template='merge_sort_{}', encoding='utf8',
+            step=fx.MAX_ITEMS_IN_MEMORY, tmp_file_template='merge_sort_{}', encoding='utf8',
             verbose=True,
     ):
         if len(keys) == 0:

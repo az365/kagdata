@@ -1,5 +1,9 @@
 from enum import Enum
 
+
+MAX_ITEMS_IN_MEMORY = 5000000
+
+
 try:  # Assume we're a sub-module in a package.
     from .any_flux import AnyFlux
     from .lines_flux import LinesFlux
