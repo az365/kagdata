@@ -182,6 +182,21 @@ class RecordsFlux(fx.AnyFlux):
         else:
             return grouped_fx.values()
 
+    def get_histograms(self, fields=[], max_values=25, ignore_none=False):
+        histograms = dict()
+        for r in self.items:
+            for f in fields or r.keys():
+                if f not in histograms:
+                    histograms[f] = dict()
+                cur_hist = histograms[f]
+                cur_value = r.get(f)
+                cur_count = cur_hist.get(cur_value, 0)
+                can_add_new_key = len(cur_hist) < max_values
+                if (cur_count or can_add_new_key) and (cur_value is not None or not ignore_none):
+                    cur_hist[cur_value] = cur_count + 1
+        for k, v in histograms.items():
+            yield k, v
+
     def to_lines(self, columns, add_title_row=False, delimiter='\t'):
         return fx.LinesFlux(
             self.to_rows(columns, add_title_row=add_title_row),
