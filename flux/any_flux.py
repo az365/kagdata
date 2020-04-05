@@ -169,11 +169,20 @@ class AnyFlux:
             check=True,
         )
 
-    def filter(self, function):
+    def filter(self, *functions):
+        def filter_function(item):
+            for f in functions:
+                if not f(item):
+                    return False
+            return True
         props = self.meta()
         props.pop('count')
+        filtered_items = filter(filter_function, self.items)
+        if self.is_in_memory():
+            filtered_items = list(filtered_items)
+            props['count'] = len(filtered_items)
         return self.__class__(
-            filter(function, self.items),
+            filtered_items,
             **props
         )
 

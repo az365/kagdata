@@ -50,11 +50,12 @@ def test_map():
 
 
 def test_filter():
-    expected = [7, 9, 6, 8]
+    expected = [7, 6, 8]
     received = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).filter(
         lambda i: i > 5,
+        lambda i: i <= 8,
     ).get_list()
     assert received == expected
 
