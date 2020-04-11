@@ -1,8 +1,10 @@
 try:  # Assume we're a sub-module in a package.
     from . import fluxes as fx
+    from . import mappers_and_reducers as mr
     from . import readers
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
     import fluxes as fx
+    import mappers_and_reducers as mr
     import readers
 
 
@@ -12,6 +14,12 @@ EXAMPLE_CSV_ROWS = [
     'a,1',
     'b,"2,22"',
     'c,3',
+]
+EXAMPLE_TSV_ROWS = [
+    '1\t2\t3',
+    '1\t4\t5',
+    '1\t6\t7',
+    '9\t4\t9',
 ]
 
 
@@ -364,6 +372,29 @@ def test_sorted_group_by_key():
     assert received == expected
 
 
+def test_calc_histogram():
+    expected = [
+        ('x', {1: 3, 9: 1}),
+        ('y', {2: 1, 4: 2, 6: 1})
+    ]
+    received = readers.from_list(
+        EXAMPLE_TSV_ROWS,
+    ).to_lines().to_rows(
+        '\t',
+    ).to_records(
+        columns=('x', 'y', 'z'),
+    ).select(
+        # '*',
+        x=('x', int),
+        y=('y', int),
+        z=('z', int),
+    ).apply(
+        lambda a: mr.get_histograms(a, fields=['x', 'y']),
+        native=False,
+    ).get_list()
+    assert received == expected
+
+
 def test_to_rows():
     expected = [['a', '1'], ['b', '2,22'], ['c', '3']]
     received = readers.from_list(
@@ -405,5 +436,6 @@ if __name__ == '__main__':
     test_disk_sort_by_key()
     test_sort()
     test_sorted_group_by_key()
+    test_calc_histogram()
     test_to_rows()
     test_parse_json()

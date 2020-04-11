@@ -52,4 +52,21 @@ def transpose_records_list(records_list):
     for r in records_list:
         for k, v in r.items():
             record_out[k] = record_out.get(k, []) + [v]
-    yield record_out
+    return record_out
+
+
+def get_histograms(records, fields=tuple(), max_values=25, ignore_none=False):
+    histograms = dict()
+    for r in records:
+        for f in fields or r.keys():
+            if f not in histograms:
+                histograms[f] = dict()
+            cur_hist = histograms[f]
+            cur_value = r.get(f)
+            cur_count = cur_hist.get(cur_value, 0)
+            can_add_new_key = len(cur_hist) < max_values
+            if (cur_count or can_add_new_key) and (cur_value is not None or not ignore_none):
+                cur_hist[cur_value] = cur_count + 1
+    for k, v in histograms.items():
+        yield k, v
+
