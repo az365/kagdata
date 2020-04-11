@@ -280,20 +280,27 @@ def test_split_by_func():
     assert received == expected
 
 
-def test_split_to_disk_by_step():
+def test_split_by_step():
     expected = [
         [1, 3, 5, 7],
         [9, 2, 4, 6],
         [8],
     ]
-    split = readers.from_list(
+    split_0 = readers.from_list(
         EXAMPLE_INT_SEQUENCE
     ).split_to_disk_by_step(
         step=4,
         tmp_file_template='test_split_by_step_{}.tmp',
     )
-    received = [f.get_list() for f in split]
-    assert received == expected
+    received_0 = [f.get_list() for f in split_0]
+    assert received_0 == expected, 'test case 0'
+    split_1 = readers.from_list(
+        EXAMPLE_INT_SEQUENCE
+    ).split_to_iter_by_step(
+        step=4,
+    )
+    received_1 = [f.get_list() for f in split_1]
+    assert received_1 == expected, 'test case 1'
 
 
 def test_memory_sort():
@@ -456,7 +463,7 @@ if __name__ == '__main__':
     test_separate_first()
     test_split_by_pos()
     test_split_by_func()
-    test_split_to_disk_by_step()
+    test_split_by_step()
     test_memory_sort()
     test_disk_sort_by_key()
     test_sort()

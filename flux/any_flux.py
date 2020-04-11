@@ -398,6 +398,24 @@ class AnyFlux:
             part_start = part_start + step
         return sorted_parts
 
+    def split_to_iter_by_step(self, step):
+        def take_items():
+            output_items = list()
+            for n, i in self.enumerated_items():
+                output_items.append(i)
+                if n + 1 >= step:
+                    break
+            return output_items
+        items = take_items()
+        props = self.meta()
+        while items:
+            props['count'] = len(items)
+            yield self.__class__(
+                items,
+                **props
+            )
+            items = take_items()
+
     def memory_sort(self, key=lambda i: i, reverse=False):
         sorted_items = sorted(
             self.to_memory().items,
