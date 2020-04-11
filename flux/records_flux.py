@@ -1,3 +1,5 @@
+import pandas as pd
+
 try:  # Assume we're a sub-module in a package.
     from . import fluxes as fx
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
@@ -181,6 +183,12 @@ class RecordsFlux(fx.AnyFlux):
             return grouped_fx
         else:
             return grouped_fx.values()
+
+    def get_dataframe(self, columns=None):
+        dataframe = pd.DataFrame(self.items)
+        if columns:
+            dataframe = dataframe[columns]
+        return dataframe
 
     def to_lines(self, columns, add_title_row=False, delimiter='\t'):
         return fx.LinesFlux(
