@@ -72,6 +72,16 @@ def test_map():
     assert received_types == expected_types, 'test for types'
 
 
+def test_flat_map():
+    expected = ['a', 'a', 'b', 'b']
+    received = readers.from_list(
+        ['a', 'b']
+    ).flat_map(
+        lambda i: [i, i],
+    ).get_list()
+    assert received == expected
+
+
 def test_filter():
     expected = [7, 6, 8]
     received = readers.from_list(
@@ -467,6 +477,7 @@ def test_parse_json():
 
 if __name__ == '__main__':
     test_map()
+    test_flat_map()
     test_filter()
     test_take()
     test_skip()

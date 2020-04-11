@@ -63,6 +63,16 @@ class AnyFlux:
     def flux_type(self):
         return fx.get_class(self.class_name())
 
+    def get_class(self, other=None):
+        if other is None:
+            return self.__class__
+        elif isinstance(other, (fx.FluxType, str)):
+            return fx.get_class(fx.FluxType(other))
+        elif inspect.isclass(other):
+            return other
+        else:
+            raise TypeError('to parameter must be class or FluxType (got {})'.format(type(to)))
+
     @staticmethod
     def is_valid_item(item):
         return True
@@ -141,24 +151,6 @@ class AnyFlux:
             **props
         )
 
-    def map(self, function=lambda i: i, to=None):
-        if to is None:
-            fx_class = self.__class__
-        elif isinstance(to, (fx.FluxType, str)):
-            # fx_class = fx.get_class(to)
-            # fx_class = fx.get_class(fx.FluxType)
-            fx_class = fx.get_class(fx.FluxType(to))
-        elif inspect.isclass(to):
-            fx_class = to
-        else:
-            raise TypeError('to parameter must be class or FluxType (got {})'.format(type(to)))
-        new_props_keys = fx_class([]).meta().keys()
-        props = {k: v for k, v in self.meta().items() if k in new_props_keys}
-        return fx_class(
-            map(function, self.items),
-            **props
-        )
-
     def native_map(self, function):
         return self.__class__(
             map(function, self.items),
@@ -171,7 +163,7 @@ class AnyFlux:
             self.count,
         )
 
-    def map_to_records(self, function):
+    def map_to_records(self, function=None):
         def get_record(i):
             if function is None:
                 return i if isinstance(i, dict) else dict(item=i)
@@ -181,6 +173,31 @@ class AnyFlux:
             map(get_record, self.items),
             count=self.count,
             check=True,
+        )
+
+    def map(self, function=lambda i: i, to=None):
+        fx_class = self.get_class(to)
+        new_props_keys = fx_class([]).meta().keys()
+        props = {k: v for k, v in self.meta().items() if k in new_props_keys}
+        items = map(function, self.items)
+        if self.is_in_memory():
+            items = list(items)
+        return fx_class(
+            items,
+            **props
+        )
+
+    def flat_map(self, function=lambda i: i, to=None):
+        def get_items():
+            for i in self.items:
+                yield from function(i)
+        fx_class = self.get_class(to)
+        new_props_keys = fx_class([]).meta().keys()
+        props = {k: v for k, v in self.meta().items() if k in new_props_keys}
+        props.pop('count')
+        return fx_class(
+            get_items(),
+            **props
         )
 
     def filter(self, *functions):
