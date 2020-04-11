@@ -79,14 +79,6 @@ def get_key_function(descriptions):
     return key_function
 
 
-def update_arg(args, addition=None):
-    if addition:
-        args = list(args) + (addition if isinstance(addition, (list, tuple)) else [addition])
-    if len(args) == 1 and isinstance(args[0], (list, tuple)):
-        args = args[0]
-    return args
-
-
 class RecordsFlux(fx.AnyFlux):
     def __init__(self, items, count=None, check=True):
         super().__init__(
@@ -208,7 +200,7 @@ class RecordsFlux(fx.AnyFlux):
 
     def to_rows(self, *columns, **kwargs):
         add_title_row = kwargs.pop('add_title_row', None)
-        columns = update_arg(columns, kwargs.pop('columns', None))
+        columns = fx.update_arg(columns, kwargs.pop('columns', None))
         if kwargs:
             raise AttributeError('to_rows(): {} arguments are not supported'.format(kwargs.keys()))
 

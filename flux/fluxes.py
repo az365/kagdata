@@ -54,7 +54,16 @@ def is_flux(obj):
     )
 
 
-def concat(list_fluxes):
+def update_arg(args, addition=None):
+    if addition:
+        args = list(args) + (addition if isinstance(addition, (list, tuple)) else [addition])
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        args = args[0]
+    return args
+
+
+def concat(*list_fluxes):
+    list_fluxes = update_arg(list_fluxes)
     result = list_fluxes[0]
     for cur_flux in list_fluxes[1:]:
         result = result.add_flux(cur_flux)
