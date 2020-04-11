@@ -140,7 +140,7 @@ class PairsFlux(fx.RowsFlux):
         else:
             return self.extract_keys_on_disk(tmp_file_template)
 
-    def to_dict(self, of_lists=False):
+    def get_dict(self, of_lists=False):
         result = dict()
         if of_lists:
             for k, v in self.items:

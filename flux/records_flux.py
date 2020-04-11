@@ -247,10 +247,10 @@ class RecordsFlux(fx.AnyFlux):
             secondary=fx.FluxType.RecordsFlux if value is None else fx.FluxType.AnyFlux,
         )
 
-    def to_dict(self, key_field, value_field=None, of_lists=False):
+    def get_dict(self, key, value=None, of_lists=False):
         return self.to_pairs(
-            key_field,
-            value_field,
-        ).to_dict(
+            key,
+            value,
+        ).get_dict(
             of_lists,
         )
