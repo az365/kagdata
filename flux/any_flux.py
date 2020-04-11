@@ -472,9 +472,18 @@ class AnyFlux:
             json.dumps
         ).to_lines()
 
-    def to_rows(self, **kwargs):
+    def to_rows(self, *args, **kwargs):
+        function = kwargs.pop('function', None)
+        if kwargs:
+            raise AttributeError(
+                'to_rows(): kwargs {} are not supported for class {}'.format(kwargs.keys(), self.class_name())
+            )
+        if args:
+            raise AttributeError(
+                'to_rows(): positional arguments are not supported for class {}'.format(self.class_name())
+            )
         return fx.RowsFlux(
-            self.items,
+            function(self.items) if function is not None else self.items,
             count=self.count,
         )
 
