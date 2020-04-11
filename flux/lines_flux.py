@@ -59,8 +59,8 @@ class LinesFlux(fx.AnyFlux):
                     raise json.JSONDecodeError(err.msg, err.doc, err.pos)
         return self.map_to_records(
             json_loads,
-        ).set_count(
-            self.count,
+        ).set_meta(
+            count=self.count,
         )
 
     def save(self, filename, encoding=None, end='\n', verbose=True, immediately=False):

@@ -42,6 +42,20 @@ class AnyFlux:
             count=self.count,
         )
 
+    def set_meta(self, **meta):
+        return self.__class__(
+            self.items,
+            **meta
+        )
+
+    def update_meta(self, **meta):
+        props = self.meta()
+        props.update(meta)
+        return self.__class__(
+            self.items,
+            **props
+        )
+
     def class_name(self):
         return self.__class__.__name__
 
@@ -87,6 +101,8 @@ class AnyFlux:
     def set_count(self, count):
         props = self.meta()
         props['count'] = count
+        if 'check' in props:
+            props['check'] = False
         return self.__class__(
             self.items,
             **props
