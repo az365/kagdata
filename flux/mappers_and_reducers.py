@@ -1,4 +1,8 @@
 import csv
+import re
+
+
+RE_LETTERS = re.compile('[^a-zа-я ]')
 
 
 def split_csv_row(line, delimiter=None):
@@ -70,3 +74,26 @@ def get_histograms(records, fields=tuple(), max_values=25, ignore_none=False):
     for k, v in histograms.items():
         yield k, v
 
+
+def norm_text(text):
+    text = str(text).lower().replace('\t', ' ')
+    text = text.replace('ё', 'е')
+    text = RE_LETTERS.sub('', text)
+    while '  ' in text:
+        text = text.replace('  ', ' ')
+    if text.startswith(' '):
+        text = text[1:]
+    if text.endswith(' '):
+        text = text[:-1]
+    return text
+
+
+def sum_by_keys(records, keys, counters):
+    result = dict()
+    for r in records:
+        cur_key = tuple([r.get(k) for k in keys])
+        if cur_key not in result:
+            result[cur_key] = dict()
+        for c in counters:
+            result[cur_key][c] = result[cur_key].get(c, 0) + r.get(c, 0)
+    yield from result.items()

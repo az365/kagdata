@@ -384,13 +384,38 @@ def test_calc_histogram():
     ).to_records(
         columns=('x', 'y', 'z'),
     ).select(
-        # '*',
         x=('x', int),
         y=('y', int),
         z=('z', int),
     ).apply(
         lambda a: mr.get_histograms(a, fields=['x', 'y']),
         native=False,
+    ).get_list()
+    assert received == expected
+
+
+def test_norm_text():
+    expected = 'абв gb'
+    received = mr.norm_text(
+        '\t Абв 123 Gb\n'
+    )
+    assert received == expected
+
+
+def test_sum_by_keys():
+    expected = [((2, 1), {'h': 3}), ((4, 3), {'h': 5})]
+    received = readers.from_list(
+        [
+            {'a': 1, 'b': 2, 'h': 1},
+            {'a': 3, 'b': 4, 'h': 5},
+            {'a': 1, 'b': 2, 'h': 2},
+        ],
+    ).apply(
+        lambda a: mr.sum_by_keys(
+            a,
+            keys=('b', 'a'),
+            counters=('h', ),
+        ),
     ).get_list()
     assert received == expected
 
@@ -437,5 +462,7 @@ if __name__ == '__main__':
     test_sort()
     test_sorted_group_by_key()
     test_calc_histogram()
+    test_norm_text()
+    test_sum_by_keys()
     test_to_rows()
     test_parse_json()
