@@ -99,9 +99,12 @@ class PairsFlux(fx.RowsFlux):
                 prev_k = k
                 accumulated.append(v)
             yield prev_k, accumulated
-        return fx.PairsFlux(
+        fx_groups = fx.PairsFlux(
             get_groups(),
         )
+        if self.is_in_memory():
+            fx_groups = fx_groups.to_memory()
+        return fx_groups
 
     def values(self):
         return self.secondary_flux()
