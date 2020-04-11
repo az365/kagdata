@@ -24,11 +24,16 @@ EXAMPLE_TSV_ROWS = [
 
 
 def test_map():
+    expected_types = ['AnyFlux', 'LinesFlux', 'LinesFlux', 'LinesFlux']
+    received_types = list()
     expected_0 = [-i for i in EXAMPLE_INT_SEQUENCE]
     received_0 = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).map(
         lambda i: -i,
+    ).submit(
+        received_types,
+        lambda f: f.class_name(),
     ).get_list()
     assert received_0 == expected_0, 'test case 0'
     expected_1 = [str(-i) for i in EXAMPLE_INT_SEQUENCE]
@@ -37,6 +42,9 @@ def test_map():
     ).map(
         lambda i: str(-i),
         to=fx.LinesFlux,
+    ).submit(
+        received_types,
+        lambda f: f.class_name(),
     ).get_list()
     assert received_1 == expected_1, 'test case 1'
     expected_2 = [str(-i) for i in EXAMPLE_INT_SEQUENCE]
@@ -45,6 +53,9 @@ def test_map():
     ).map(
         lambda i: str(-i),
         to=fx.FluxType.LinesFlux,
+    ).submit(
+        received_types,
+        lambda f: f.class_name(),
     ).get_list()
     assert received_2 == expected_2, 'test case 2'
     expected_3 = [str(-i) for i in EXAMPLE_INT_SEQUENCE]
@@ -53,8 +64,12 @@ def test_map():
     ).map(
         lambda i: str(-i),
         to='LinesFlux',
+    ).submit(
+        received_types,
+        lambda f: f.class_name(),
     ).get_list()
     assert received_3 == expected_3, 'test case 3'
+    assert received_types == expected_types, 'test for types'
 
 
 def test_filter():

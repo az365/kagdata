@@ -1,4 +1,5 @@
 from itertools import chain, tee
+from datetime import datetime
 import inspect
 import json
 
@@ -539,3 +540,29 @@ class AnyFlux:
                 print(i)
         else:
             print(self.one())
+
+    def submit(self, external_object=print, flux_function='count', key=None, show=False):
+        if callable(flux_function):
+            value = flux_function(self)
+        elif isinstance(flux_function, str):
+            value = self.meta().get(flux_function)
+        else:
+            raise TypeError('flux_function must be function or meta-field')
+        if key is not None:
+            value = {key: value}
+        if show:
+            print(value)
+
+        if callable(external_object):
+            external_object(value)
+        elif isinstance(external_object, list):
+            external_object.append(value)
+        elif isinstance(external_object, dict):
+            if isinstance(value, dict):
+                external_object.update(value)
+            else:
+                cur_time = datetime.now().isoformat()
+                external_object[cur_time] = value
+        else:
+            raise TypeError('external_object must be callable, list or dict')
+        return self
