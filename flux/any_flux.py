@@ -422,6 +422,7 @@ class AnyFlux:
             key=key,
             reverse=reverse,
         )
+        self.count = len(sorted_items)
         return self.__class__(
             sorted_items,
             **self.meta()
