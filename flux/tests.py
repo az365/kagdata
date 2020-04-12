@@ -404,6 +404,40 @@ def test_sorted_group_by_key():
     assert received == expected
 
 
+def test_group_by():
+    example = [
+        (1, 11), (1, 12),
+        (2, 21),
+        (3, 31), (3, 32), (3, 33),
+    ]
+    expected = [
+        [11, 12],
+        [21],
+        [31, 32, 33],
+    ]
+    received_0 = readers.from_list(example).to_rows().to_records(
+        columns=('x', 'y'),
+    ).group_by(
+        'x',
+        as_pairs=True,
+    ).map(
+        lambda a: [i.get('y') for i in a[1]],
+        to=fx.FluxType.RowsFlux,
+    ).get_list()
+    assert received_0 == expected, 'test case 0'
+
+    received_1 = readers.from_list(example).to_rows().to_records(
+        columns=('x', 'y'),
+    ).group_by(
+        'x',
+        as_pairs=False,
+    ).map(
+        lambda a: [i.get('y') for i in a],
+        to=fx.FluxType.RowsFlux,
+    ).get_list()
+    assert received_1 == expected, 'test case 1'
+
+
 def test_calc_histogram():
     expected = [
         ('x', {1: 3, 9: 1}),
@@ -495,6 +529,7 @@ if __name__ == '__main__':
     test_disk_sort_by_key()
     test_sort()
     test_sorted_group_by_key()
+    test_group_by()
     test_calc_histogram()
     test_norm_text()
     test_sum_by_keys()

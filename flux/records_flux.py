@@ -170,21 +170,45 @@ class RecordsFlux(fx.AnyFlux):
         else:
             return self.disk_sort(key_function, reverse, step, tmp_file_template, encoding, verbose)
 
+    def sorted_group_by(self, *keys, as_pairs=True):
+        keys = fx.update_arg(keys)
+
+        def get_groups():
+            key_function = get_key_function(keys)
+            accumulated = list()
+            prev_k = None
+            for r in self.items:
+                k = key_function(r)
+                if (k != prev_k) and accumulated:
+                    yield (prev_k, accumulated) if as_pairs else accumulated
+                    accumulated = list()
+                prev_k = k
+                accumulated.append(r)
+            yield (prev_k, accumulated) if as_pairs else accumulated
+        if as_pairs:
+            fx_groups = fx.PairsFlux(
+                get_groups(),
+                secondary=fx.FluxType.RowsFlux,
+            )
+        else:
+            fx_groups = fx.RowsFlux(
+                get_groups(),
+                check=False,
+            )
+        return fx_groups.to_memory() if self.is_in_memory() else fx_groups
+
     def group_by(self, *keys, step=None, as_pairs=True, verbose=True):
+        keys = fx.update_arg(keys)
         sorted_fx = self.sort(
             *keys,
             step=step,
             verbose=verbose,
         )
-        if as_pairs:
-            sorted_fx = sorted_fx.to_pairs(
-                key=get_key_function(keys),
-            )
-        grouped_fx = sorted_fx.sorted_group_by_key()
-        if as_pairs:
-            return grouped_fx
-        else:
-            return grouped_fx.values()
+        grouped_fx = sorted_fx.sorted_group_by(
+            keys,
+            as_pairs=as_pairs
+        )
+        return grouped_fx
 
     def get_dataframe(self, columns=None):
         dataframe = pd.DataFrame(self.items)
