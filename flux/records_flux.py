@@ -21,19 +21,22 @@ def check_records(records, skip_errors=False):
         yield r
 
 
-def sort_by_dependencies(selectors):
+def topologically_sorted(selectors):
     ordered_fields = list()
+    unordered_fields = list()
+    unresolved_dependencies = dict()
     for field, description in selectors.items():
-        f_pos = 0
-        if not callable(description):
-            _, dependencies = fx.process_selector_description(description)
-            for d in dependencies:
-                if d in ordered_fields:
-                    d_pos = ordered_fields.index(d)
-                    if d_pos >= f_pos:
-                        f_pos = d_pos + 1
-        ordered_fields.insert(f_pos, field)
-    print('ordered_fields:', ordered_fields)
+        unordered_fields.append(field)
+        _, dependencies = fx.process_selector_description(description)
+        unresolved_dependencies[field] = [d for d in dependencies if d in selectors.keys() and d != field]
+    while unordered_fields:  # Kahn's algorithm
+        for field in unordered_fields:
+            if not unresolved_dependencies[field]:
+                ordered_fields.append(field)
+                unordered_fields.remove(field)
+                for f in unordered_fields:
+                    if field in unresolved_dependencies[f]:
+                        unresolved_dependencies[f].remove(field)
     return [(f, selectors[f]) for f in ordered_fields]
 
 
@@ -53,7 +56,7 @@ def select_fields(rec_in, *descriptions):
     fields_out = list()
     for desc in descriptions:
         if desc == '*':
-            fields_out.append(rec_in.keys())
+            fields_out += list(rec_in.keys())
         elif isinstance(desc, (list, tuple)):
             if len(desc) > 1:
                 f_out = desc[0]
@@ -128,12 +131,11 @@ class RecordsFlux(fx.AnyFlux):
 
     def select(self, *fields, **selectors):
         descriptions = list(fields)
-        for k, v in sort_by_dependencies(selectors):
+        for k, v in topologically_sorted(selectors):
             if isinstance(v, (list, tuple)):
                 descriptions.append([k] + list(v)),
             else:
                 descriptions.append([k] + [v])
-        print('select(descriptions=', descriptions, ')')
         return self.native_map(
             lambda r: select_fields(r, *descriptions),
         )

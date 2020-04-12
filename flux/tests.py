@@ -416,6 +416,7 @@ def test_calc_histogram():
     ).to_records(
         columns=('x', 'y', 'z'),
     ).select(
+        '*',
         x=('x', int),
         y=('y', int),
         z=('z', int),

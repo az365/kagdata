@@ -71,11 +71,16 @@ def concat(*list_fluxes):
 
 
 def process_selector_description(d):
-    if callable(d[0]):
-        function, inputs = d[0], d[1:]
-    elif callable(d[-1]):
-        inputs, function = d[:-1], d[-1]
+    if callable(d):
+        function, inputs = d, list()
+    elif isinstance(d, (list, tuple)):
+        if callable(d[0]):
+            function, inputs = d[0], d[1:]
+        elif callable(d[-1]):
+            inputs, function = d[:-1], d[-1]
+        else:
+            inputs, function = d, lambda *a: tuple(a)
     else:
-        inputs, function = d, lambda *a: tuple(a)
+        inputs, function = [d], lambda v: v
     return function, inputs
 
