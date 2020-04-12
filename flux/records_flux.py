@@ -72,14 +72,17 @@ def select_fields(rec_in, *descriptions):
     return {f: record[f] for f in fields_out}
 
 
-def get_key_function(descriptions):
+def get_key_function(descriptions, take_hash=False):
     if len(descriptions) == 0:
         raise ValueError('key must be defined')
     elif len(descriptions) == 1:
         key_function = lambda r: select_value(r, descriptions[0])
     else:
         key_function = lambda r: tuple([select_value(r, d) for d in descriptions])
-    return key_function
+    if take_hash:
+        return lambda r: hash(key_function(r))
+    else:
+        return key_function
 
 
 class RecordsFlux(fx.AnyFlux):
@@ -199,6 +202,10 @@ class RecordsFlux(fx.AnyFlux):
 
     def group_by(self, *keys, step=None, as_pairs=True, verbose=True):
         keys = fx.update_arg(keys)
+        if not as_pairs:
+            keys = [
+                get_key_function(keys, take_hash=True),
+            ]
         sorted_fx = self.sort(
             *keys,
             step=step,
@@ -263,6 +270,7 @@ class RecordsFlux(fx.AnyFlux):
             list(get_pairs()) if self.is_in_memory() else get_pairs(),
             count=self.count,
             secondary=fx.FluxType.RecordsFlux if value is None else fx.FluxType.AnyFlux,
+            check=False,
         )
 
     def get_dict(self, key, value=None, of_lists=False):
