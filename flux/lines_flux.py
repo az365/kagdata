@@ -72,7 +72,7 @@ class LinesFlux(fx.AnyFlux):
             count=self.count,
         )
 
-    def save(self, filename, encoding=None, end='\n', verbose=True, immediately=False):
+    def lazy_save(self, filename, encoding=None, end='\n', verbose=True, immediately=False):
         def write_and_yield(fh, lines):
             n = 0
             for n, i in enumerate(lines):
@@ -93,7 +93,7 @@ class LinesFlux(fx.AnyFlux):
             )
 
     def to_file(self, filename, encoding=None, end='\n', verbose=True, return_flux=True):
-        saved_flux = self.save(filename, encoding, end, verbose, immediately=False)
+        saved_flux = self.lazy_save(filename, encoding, end, verbose, immediately=False)
         saved_flux.pass_items()
         if return_flux:
             return readers.from_file(

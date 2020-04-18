@@ -183,7 +183,7 @@ def test_save_and_read():
     received_0 = readers.from_list(
         EXAMPLE_INT_SEQUENCE,
     ).to_lines(
-    ).save(
+    ).lazy_save(
         EXAMPLE_FILENAME,
     ).get_list()
     received_1 = readers.from_file(
