@@ -1,3 +1,4 @@
+import sys
 import json
 import csv
 
@@ -7,6 +8,14 @@ try:
 except ImportError:
     import fluxes as fx
     import readers
+
+max_int = sys.maxsize
+while True:  # To prevent _csv.Error: field larger than field limit (131072)
+    try:  # decrease the max_int value by factor 10 as long as the OverflowError occurs.
+        csv.field_size_limit(max_int)
+        break
+    except OverflowError:
+        max_int = int(max_int / 10)
 
 
 def is_line(line):
