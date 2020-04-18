@@ -390,8 +390,13 @@ class AnyFlux:
         if count is None:
             total_fn = tmp_file_template.format('total')
             if verbose:
-                print('Calc count in {}'.format(total_fn))
-            count, total_fx = self.to_json().to_file(total_fn, encoding=encoding).map_to_any(json.loads).separate_count()
+                print('Collecting input into {}'.format(total_fn))
+            count, total_fx = self.to_json().to_file(
+                total_fn,
+                encoding=encoding,
+            ).map_to_any(
+                json.loads,
+            ).separate_count()
         part_start, part_no, sorted_parts = 0, None, list()
         while part_start < count:
             part_no = int(part_start / step)
@@ -469,6 +474,7 @@ class AnyFlux:
             step=fx.MAX_ITEMS_IN_MEMORY, tmp_file_template='merge_sort_{}', encoding='utf8',
             verbose=True,
     ):
+        keys=fx.update_arg(keys)
         if len(keys) == 0:
             key = lambda i: i
         elif len(keys) == 1:
