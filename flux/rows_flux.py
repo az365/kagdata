@@ -89,13 +89,15 @@ class RowsFlux(fx.AnyFlux):
             **self.meta()
         )
 
-    def schematize(self, schema, skip_errors=False):
+    def schematize(self, schema, skip_bad_rows=False, skip_bad_values=False, verbose=True):
         return fx.SchemaFlux(
             self.items,
             **self.meta(),
         ).schematize(
             schema=schema,
-            skip_errors=skip_errors,
+            skip_bad_rows=skip_bad_rows,
+            skip_bad_values=skip_bad_values,
+            verbose=verbose,
         )
 
     def to_lines(self, delimiter='\t'):

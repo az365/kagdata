@@ -5,7 +5,7 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
 
 
 NAME_POS, TYPE_POS, HINT_POS = 0, 1, 2
-TYPES = dict(str=str, int=int, float=float, bool=bool)
+TYPE_CONV_FUNCS = dict(bool=bool, int=int, float=float, str=str, text=str, date=str)
 
 
 def is_row(row):
@@ -17,10 +17,10 @@ def is_valid(row, schema):
         if schema is not None:
             for value, description in zip(row, schema):
                 field_type = description[TYPE_POS]
-                if field_type in TYPES.values():
+                if field_type in TYPE_CONV_FUNCS.values():
                     return isinstance(value, field_type)
-                elif field_type == TYPES.keys():
-                    selected_type = TYPES[field_type]
+                elif field_type == TYPE_CONV_FUNCS.keys():
+                    selected_type = TYPE_CONV_FUNCS[field_type]
                     return isinstance(value, selected_type)
         else:
             return True
@@ -38,18 +38,34 @@ def check_rows(rows, schema, skip_errors=False):
 
 
 def get_cast_function(field_type):
-    return TYPES[field_type]
+    return TYPE_CONV_FUNCS[field_type]
 
 
-def cast(value, field_type):
+def cast(value, field_type, default_int=0):
     cast_function = get_cast_function(field_type)
+    if value in (None, 'None', '') and field_type in ('int', int):
+        value = default_int
     return cast_function(value)
 
 
-def apply_schema_to_row(row, schema):
+def apply_schema_to_row(row, schema, skip_bad_values=False, verbose=True):
     for c, (value, description) in enumerate(zip(row, schema)):
         field_type = description[TYPE_POS]
-        new_value = cast(value, field_type)
+        try:
+            new_value = cast(value, field_type)
+        except ValueError as e:
+            field_name = description[NAME_POS]
+            if verbose:
+                print(
+                    'Error while casting field {} ({}) with value {} into type {}'.format(
+                        field_name, c,
+                        value, field_type,
+                    )
+                )
+            if not skip_bad_values:
+                if verbose:
+                    print('Error in row:', str(list(zip(row, schema)))[:80], '...')
+                raise e
         row[c] = new_value
     return row
 
@@ -65,7 +81,7 @@ class SchemaFlux(fx.RowsFlux):
 
     def meta(self):
         return dict(
-            coout=self.count(),
+            count=self.count(),
             check=self.check(),
             schema=self.schema(),
         )
@@ -90,19 +106,20 @@ class SchemaFlux(fx.RowsFlux):
             schema=schema,
         )
 
-    def schematize(self, schema, skip_errors=False):
+    def schematize(self, schema, skip_bad_rows=False, skip_bad_values=False, verbose=True):
         def apply_schema_to_rows(rows):
             for r in rows:
-                if skip_errors:
+                if skip_bad_rows:
                     try:
                         yield apply_schema_to_row(r, schema)
                     except ValueError:
-                        pass
+                        if verbose:
+                            print('Skip bad row:', str(r)[:80], '...')
                 else:
-                    yield apply_schema_to_row(r, schema)
+                    yield apply_schema_to_row(r, schema, skip_bad_values=skip_bad_values, verbose=verbose)
         return SchemaFlux(
             apply_schema_to_rows(self.items),
-            count=None if skip_errors else self.count,
-            check=False,  # already checked
+            count=None if skip_bad_rows else self.count,
+            check=False,
             schema=schema,
         )
