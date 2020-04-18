@@ -109,16 +109,6 @@ class AnyFlux:
             result += 1
         return result
 
-    def set_count(self, count):
-        props = self.meta()
-        props['count'] = count
-        if 'check' in props:
-            props['check'] = False
-        return self.__class__(
-            self.items,
-            **props
-        )
-
     def tee(self, n=2):
         return [
             self.__class__(
@@ -299,8 +289,8 @@ class AnyFlux:
         return self.add_items(
             flux.items,
             before=before,
-        ).set_count(
-            total_count,
+        ).update_meta(
+            count=total_count,
         )
 
     def count_to_items(self):
@@ -349,8 +339,8 @@ class AnyFlux:
                     prev_pos,
                 ).take(
                     count_items,
-                ).set_count(
-                    count_items,
+                ).update_meta(
+                    count=count_items,
                 )
             )
             prev_pos = cur_pos
