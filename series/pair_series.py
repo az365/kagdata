@@ -22,14 +22,22 @@ class PairSeries(AnySeries):
         )
 
     @classmethod
+    def from_items(cls, items):
+        series = cls()
+        for i in items:
+            series.append_pair(*i)
+        return series
+
+    @classmethod
     def from_dict(cls, my_dict, sort=True):
-        pair_series = cls()
+        series = cls()
         if sort:
             for k in sorted(my_dict):
-                pair_series.append_pair(k, my_dict[k])
+                series.append_pair(k, my_dict[k])
         else:
             for i in my_dict.items():
-                pair_series.append_pair(*i)
+                series.append_pair(*i)
+        return series
 
     def key_series(self):
         return AnySeries(self.keys)
@@ -49,7 +57,7 @@ class PairSeries(AnySeries):
     def append(self, item, return_series=False):
         assert len(item) == 2, 'Len of pair mus be 2 (got {})'.format(item)
         key, value = item
-        return self.append(key, value, return_series)
+        return self.append_pair(key, value, return_series)
 
     def append_pair(self, key, value, return_series=False):
         self.keys.append(key)
@@ -69,7 +77,7 @@ class PairSeries(AnySeries):
             if function(k, v):
                 keys.append(k)
                 values.append(v)
-            return PairSeries(keys, values)
+            return __class__(keys, values)
 
     def filter_keys(self, function):
         return self.filter_pairs(lambda k, v: function(k))
@@ -82,3 +90,25 @@ class PairSeries(AnySeries):
 
     def filter_keys_between(self, key_min, key_max):
         return self.filter_keys(lambda k: key_min <= k <= key_max)
+
+    def map_keys(self, function):
+        for n in self.get_range_numbers():
+            self.keys[n] = function(self.keys[n])
+        return self
+
+    def sort_by_keys(self, reverse=False):
+        return __class__().from_items(
+            sorted(self.get_items(), reverse=reverse),
+        )
+
+    def group_by_keys(self):
+        dict_groups = dict()
+        for k, v in self.get_items():
+            dict_groups[k] = dict_groups.get(k, []) + [v]
+        return __class__().from_dict(dict_groups)
+
+    def sum_by_keys(self):
+        self.group_by_keys().map(sum)
+
+    def mean_by_keys(self):
+        self.group_by_keys().map(lambda a: AnySeries(a).filter_values_defined().mean_value())
