@@ -15,29 +15,32 @@ class PairSeries(AnySeries):
             self,
             keys=list(),
             values=list(),
+            is_sorted=False,
     ):
-        self.keys = keys
+        self.keys = keys.get_values() if isinstance(keys, AnySeries) else list(keys)
+        self.is_sorted = is_sorted
         super().__init__(
             values=values,
         )
 
     @classmethod
-    def from_items(cls, items):
+    def from_items(cls, items, is_sorted=False):
         series = cls()
         for i in items:
             series.append_pair(*i)
+        series.is_sorted = is_sorted
         return series
 
     @classmethod
-    def from_dict(cls, my_dict, sort=True):
+    def from_dict(cls, my_dict):
         series = cls()
-        if sort:
-            for k in sorted(my_dict):
-                series.append_pair(k, my_dict[k])
-        else:
-            for i in my_dict.items():
-                series.append_pair(*i)
+        for k in sorted(my_dict):
+            series.append_pair(k, my_dict[k])
+        series.is_sorted = True
         return series
+
+    def new(self):
+        return self.__class__(is_sorted=self.is_sorted)
 
     def key_series(self):
         return AnySeries(self.keys)
@@ -77,7 +80,7 @@ class PairSeries(AnySeries):
             if function(k, v):
                 keys.append(k)
                 values.append(v)
-            return __class__(keys, values)
+        return __class__(keys, values, is_sorted=self.is_sorted)
 
     def filter_keys(self, function):
         return self.filter_pairs(lambda k, v: function(k))
@@ -85,15 +88,20 @@ class PairSeries(AnySeries):
     def filter_values(self, function):
         return self.filter_pairs(lambda k, v: function(v))
 
+    def filter_values_defined(self):
+        return self.filter_values(is_defined)
+
     def filter_keys_defined(self):
         return self.filter_keys(is_defined)
 
     def filter_keys_between(self, key_min, key_max):
         return self.filter_keys(lambda k: key_min <= k <= key_max)
 
-    def map_keys(self, function):
+    def map_keys(self, function, sorting_changed=False):
         for n in self.get_range_numbers():
             self.keys[n] = function(self.keys[n])
+        if sorting_changed:
+            self.is_sorted = False
         return self
 
     def sort_by_keys(self, reverse=False):
