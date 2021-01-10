@@ -48,6 +48,17 @@ def to_date(d, as_iso_date=False):
         return cur_date
 
 
+def get_shifted_date(d, *args, **kwargs):
+    as_iso_date = check_iso_date(d)
+    shift = timedelta(*args, **kwargs)
+    cur_date = get_date(d)
+    shifted_date = cur_date + shift
+    if as_iso_date:
+        return to_date(shifted_date, as_iso_date=as_iso_date)
+    else:
+        return shifted_date
+
+
 def get_month_from_date(d):
     if check_iso_date(d):
         return date.fromisoformat(d).month
@@ -55,7 +66,7 @@ def get_month_from_date(d):
     elif isinstance(d, date):
         return d.month
     else:
-        raise_date_type_error(c)
+        raise_date_type_error(d)
 
 
 def get_month_first_date(d):
@@ -133,6 +144,12 @@ def get_weeks_between(a, b, round_to_mondays=False):
     days_since_year_start_monday = (date_b - date_a).days
     weeks = int(days_since_year_start_monday / DAYS_IN_WEEK)
     return weeks
+
+
+def get_days_between(a, b):
+    date_a = get_date(a)
+    date_b = get_date(b)
+    return (date_a - date_b).days
 
 
 def get_date_from_year_and_week(year, week, as_iso_date=True):
