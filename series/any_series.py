@@ -15,7 +15,7 @@ class AnySeries:
             self,
             values=list(),
     ):
-        self.values = values
+        self.values = values.get_list() if isinstance(values, AnySeries) else list(values)
 
     def get_items(self):
         return self.values
@@ -31,6 +31,9 @@ class AnySeries:
 
     def get_count(self):
         return len(self.get_values())
+
+    def get_range_numbers(self):
+        return range(self.get_count())
 
     def get_item_no(self, n):
         return self.get_list()[n]
@@ -53,13 +56,12 @@ class AnySeries:
             return self
 
     def filter(self, function):
-        # return __class__(
-        return AnySeries(
+        return self.__class__(
             filter(function, self.get_items()),
         )
 
     def filter_values(self, function):
-        return __class__(
+        return self.__class__(
             values=[v for v in self.get_values() if function(v)]
         )
 
@@ -69,10 +71,26 @@ class AnySeries:
     def filter_values_nonzero(self):
         return self.filter_values(is_nonzero())
 
-    def mean_value(self):
-        return np.mean(
+    def map(self, function):
+        result = self.new()
+        for i in self.get_items():
+            result.append(function(i))
+        return result
+
+    def map_values(self, function):
+        result = self.new()
+        for i in self.get_values():
+            result.append(function(i))
+        return result
+
+    def get_sum(self):
+        return sum(
             self.filter_values_defined().get_values(),
         )
+
+    def get_mean(self):
+        values_defined = self.filter_values_defined().get_values()
+        return sum(values_defined) / len(values_defined)
 
     def smooth(self, window=3):
         result = AnySeries()
@@ -83,5 +101,13 @@ class AnySeries:
                 result.append(self.get_item_no(n))
             else:
                 sub_series = self.get_slice(n - center, n + center + 1)
-                result.append(sub_series.mean_value())
+                result.append(sub_series.get_mean())
         return result
+
+    def copy(self):
+        return self.__class__(
+            values=self.values.copy(),
+        )
+
+    def new(self):
+        return self.__class__()
