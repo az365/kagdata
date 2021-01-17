@@ -10,7 +10,7 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     )
 
 
-class PairSeries(AnySeries):
+class KeyValueSeries(AnySeries):
     def __init__(
             self,
             keys=[],

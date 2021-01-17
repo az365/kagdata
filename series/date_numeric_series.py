@@ -1,14 +1,14 @@
 try:  # Assume we're a sub-module in a package.
     from series.any_series import AnySeries
-    from series.pair_series import PairSeries
+    from series.key_value_series import KeyValueSeries
     from utils import dates as dt
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
     from ..series.any_series import AnySeries
-    from ..series.pair_series import PairSeries
+    from ..series.key_value_series import KeyValueSeries
     from ..utils import dates as dt
 
 
-class DateNumericSeries(PairSeries):
+class DateNumericSeries(KeyValueSeries):
     def __init__(
             self,
             dates=[],
