@@ -21,6 +21,14 @@ def test_get_nearest_date():
     assert received == expected
 
 
+def test_get_distance_for_nearest_date():
+    data = {'2020-01-01': 10, '2021-01-01': 20}
+    cases = ['2019-12-01', '2020-02-01', '2020-12-01', '2021-12-02']
+    expected = [31, 31, 31, 335]
+    received = [DateSeries.from_dict(data).get_distance_for_nearest_date(c) for c in cases]
+    assert received == expected
+
+
 def test_get_segment_for_date():
     data = {'2020-01-01': 10, '2021-01-01': 20, '2022-01-01': 30}
     cases = ['2019-12-01', '2020-02-01', '2021-02-01']
@@ -44,5 +52,6 @@ def test_get_interpolated_value():
 if __name__ == '__main__':
     test_smooth()
     test_get_nearest_date()
+    test_get_distance_for_nearest_date()
     test_get_segment_for_date()
     test_get_interpolated_value()

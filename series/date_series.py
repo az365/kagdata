@@ -69,7 +69,10 @@ class DateSeries(PairSeries):
         return self.period(date_a, date_b)
 
     def shift(self, distance):
-        return self.map_keys(lambda d: dt.get_shifted_date(d, distance))
+        return self.shift_dates(distance)
+
+    def shift_dates(self, distance):
+        return self.map_keys(lambda d: dt.get_shifted_date(d, days=distance))
 
     def yearly_shift(self):
         return self.map_keys(dt.get_next_year_date())
@@ -80,12 +83,14 @@ class DateSeries(PairSeries):
     def get_distance_series(self, date, take_abs=True):
         distance_series = self.__class__(
             self.key_series(),
-            self.key_series().map(lambda d: dt.get_days_between(date, d)),
+            self.key_series().map(lambda d: dt.get_days_between(date, d, take_abs)),
             is_sorted=self.is_sorted,
         )
-        if take_abs:
-            distance_series.map_values(abs)
         return distance_series
+
+    def get_distance_for_nearest_date(self, date, take_abs=True):
+        nearest_date = self.get_nearest_date(date)
+        return dt.get_days_between(date, nearest_date, take_abs)
 
     def get_nearest_date(self, date):
         if self.get_count() == 0:
@@ -122,7 +127,7 @@ class DateSeries(PairSeries):
 
     def get_segment_for_date(self, date):
         nearest_dates = [i for i in self.get_two_nearest_dates(date) if i]
-        return self.__class__.from_items(
+        return self.new().from_items(
             [(d, self.get_value(d)) for d in nearest_dates],
             is_sorted=True,
         )
@@ -152,7 +157,7 @@ class DateSeries(PairSeries):
             return self.get_linear_interpolated_value(date)
 
     def interpolate(self, dates, use_spline=False):
-        result = self.new()
+        result = self.save_meta()
         for d in dates:
             result.append_pair(d, self.get_interpolated_value(d, use_spline=use_spline))
         if dates == sorted(dates):
@@ -175,7 +180,7 @@ class DateSeries(PairSeries):
         window_days_is_even = half_window_days == int_half_window_days
         left_days = int_half_window_days
         right_days = int_half_window_days if window_days_is_even else int_half_window_days + 1
-        result = self.new()
+        result = self.save_meta()
         if for_full_window_only:
             dates = self.cropped(left_days, right_days).get_dates()
         else:
@@ -197,7 +202,7 @@ class DateSeries(PairSeries):
             input_as_list=False,
             for_full_window_only=False,
     ):
-        result = self.new()
+        result = self.save_meta()
         left_days = min(window_days_list)
         right_days = max(window_days_list)
         if for_full_window_only:
@@ -224,7 +229,7 @@ class DateSeries(PairSeries):
 
     def math(self, series, function, use_spline=False):
         assert isinstance(series, DateSeries)
-        result = self.new()
+        result = self.save_meta()
         for d, v in self.get_items():
             if v is not None:
                 v0 = series.get_interpolated_value(d, use_spline=use_spline)
