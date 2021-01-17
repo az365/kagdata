@@ -46,8 +46,21 @@ class PairSeries(AnySeries):
             is_sorted=self.is_sorted,
         )
 
-    def new(self):
-        return self.__class__(is_sorted=self.is_sorted)
+    def save_meta(self):
+        return self.new(
+            is_sorted=self.is_sorted,
+        )
+
+    def is_valid(self):
+        return len(self.keys) == len(self.values)
+
+    def validate(self, raise_exceptions=True):
+        if self.is_valid():
+            return self
+        elif raise_exceptions:
+            raise TypeError('Count of keys and values is not similar.')
+        else:
+            return None
 
     def key_series(self):
         return AnySeries(self.keys)
