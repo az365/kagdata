@@ -2,6 +2,12 @@ import math
 import numpy as np
 
 
+try:  # Assume we're a sub-module in a package.
+    from series.abstract_series import AbstractSeries
+except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
+    from ..series.abstract_series import AbstractSeries
+
+
 def is_defined(value):
     return value is not None and value is not np.nan and not math.isnan(value)
 
@@ -10,19 +16,36 @@ def is_nonzero(value):
     return (value or 0) > 0 or (value or 0) < 0
 
 
-class AnySeries:
+class AnySeries(AbstractSeries):
     def __init__(
             self,
             values=list(),
     ):
         self.values = values.get_list() if isinstance(values, AnySeries) else list(values)
 
-    def new(self, *args, **kwargs):
-        return self.__class__(*args, **kwargs)
+    @staticmethod
+    def get_data_fields():
+        return ['values']
+
+    @staticmethod
+    def get_meta_fields():
+        return []
+
+    @staticmethod
+    def get_validation_error():
+        return TypeError('values of AnySeries and children must be list')
+
+    def is_valid(self):
+        return isinstance(self.values, list)
 
     def copy(self):
         return self.__class__(
             values=self.values.copy(),
+        )
+
+    def new(self):
+        return self.__class__(
+            values=list(),
         )
 
     def get_values(self):
