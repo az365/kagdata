@@ -8,7 +8,7 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     from ..utils import dates as dt
 
 
-class DateSeries(PairSeries):
+class DateNumericSeries(PairSeries):
     def __init__(
             self,
             dates=[],
@@ -228,7 +228,7 @@ class DateSeries(PairSeries):
         )
 
     def math(self, series, function, use_spline=False):
-        assert isinstance(series, DateSeries)
+        assert isinstance(series, DateNumericSeries)
         result = self.save_meta()
         for d, v in self.get_items():
             if v is not None:
