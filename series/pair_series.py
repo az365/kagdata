@@ -13,8 +13,8 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
 class PairSeries(AnySeries):
     def __init__(
             self,
-            keys=list(),
-            values=list(),
+            keys=[],
+            values=[],
             is_sorted=False,
     ):
         self.keys = keys.get_values() if isinstance(keys, AnySeries) else list(keys)
@@ -39,6 +39,13 @@ class PairSeries(AnySeries):
         series.is_sorted = True
         return series
 
+    def copy(self):
+        return self.__class__(
+            keys=self.keys.copy(),
+            values=self.values.copy(),
+            is_sorted=self.is_sorted,
+        )
+
     def new(self):
         return self.__class__(is_sorted=self.is_sorted)
 
@@ -48,6 +55,9 @@ class PairSeries(AnySeries):
     def value_series(self):
         return AnySeries(self.values)
 
+    def get_value(self, key, default=None):
+        return self.get_dict().get(key, default)
+
     def get_keys(self):
         return self.keys
 
@@ -56,6 +66,54 @@ class PairSeries(AnySeries):
 
     def get_dict(self):
         return dict(self.get_items())
+
+    def get_first_key(self):
+        if self.get_count():
+            return self.get_keys()[0]
+
+    def get_last_key(self):
+        if self.get_count():
+            return self.get_keys()[-1]
+
+    def get_first_value(self):
+        if self.get_count():
+            return self.get_values()[0]
+
+    def get_last_value(self):
+        if self.get_count():
+            return self.get_values()[-1]
+
+    def get_first_item(self):
+        return self.get_first_key(), self.get_first_value()
+
+    def get_last_item(self):
+        return self.get_last_key(), self.get_last_value()
+
+    def get_borders(self):
+        result = self.__class__.from_items(
+            self.get_first_item(),
+            self.get_last_item(),
+        )
+        result.is_sorted = self.is_sorted
+        return result
+
+    def get_arg_min(self):
+        min_value = None
+        key_for_min_value = None
+        for k, v in self.get_items():
+            if min_value is None or v < min_value:
+                min_value = v
+                key_for_min_value = k
+        return key_for_min_value
+
+    def get_arg_max(self):
+        max_value = None
+        key_for_max_value = None
+        for k, v in self.get_items():
+            if max_value is None or v > max_value:
+                max_value = v
+                key_for_max_value = k
+        return key_for_max_value
 
     def append(self, item, return_series=False):
         assert len(item) == 2, 'Len of pair mus be 2 (got {})'.format(item)
@@ -80,7 +138,10 @@ class PairSeries(AnySeries):
             if function(k, v):
                 keys.append(k)
                 values.append(v)
-        return __class__(keys, values, is_sorted=self.is_sorted)
+        return self.__class__(
+            keys, values,
+            is_sorted=self.is_sorted,
+        )
 
     def filter_keys(self, function):
         return self.filter_pairs(lambda k, v: function(k))
@@ -107,6 +168,7 @@ class PairSeries(AnySeries):
     def sort_by_keys(self, reverse=False):
         return __class__().from_items(
             sorted(self.get_items(), reverse=reverse),
+            is_sorted=not reverse,
         )
 
     def group_by_keys(self):
@@ -119,4 +181,4 @@ class PairSeries(AnySeries):
         self.group_by_keys().map(sum)
 
     def mean_by_keys(self):
-        self.group_by_keys().map(lambda a: AnySeries(a).filter_values_defined().mean_value())
+        self.group_by_keys().map(lambda a: AnySeries(a).filter_values_defined().get_mean())
