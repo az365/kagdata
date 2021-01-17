@@ -6,10 +6,15 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     from ..series.date_series import DateSeries
 
 
-def test_smooth():
-    data = [2, 5, 2]
-    expected = [2, 3.0, 2]
-    received = AnySeries(data).smooth(3).get_list()
+def test_simple_smooth():
+    data = [2, 5, 2], [2, 5, 2, 8, 5]
+    expected = [[2, 3, 2], [2, 2, 2], [2, 3, 5, 5, 5], [2, 2, 6.5, 3.5, 5]]
+    received = list()
+    for d in data:
+        for c in (False, True):
+            received.append(
+                AnySeries(d).simple_smooth(3, exclude_center=c).get_list(),
+            )
     assert received == expected
 
 
@@ -50,7 +55,7 @@ def test_get_interpolated_value():
 
 
 if __name__ == '__main__':
-    test_smooth()
+    test_simple_smooth()
     test_get_nearest_date()
     test_get_distance_for_nearest_date()
     test_get_segment_for_date()
