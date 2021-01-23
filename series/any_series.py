@@ -10,55 +10,41 @@ class AnySeries(AbstractSeries):
     def __init__(
             self,
             values=list(),
+            validate=False,
     ):
-        self.values = values.get_list() if isinstance(values, AnySeries) else list(values)
+        super().__init__(
+            values=values.get_list() if isinstance(values, AnySeries) else list(values),
+            validate=validate,
+        )
 
-    @staticmethod
-    def get_data_fields():
+    @classmethod
+    def get_data_fields(cls):
         return ['values']
 
-    @staticmethod
-    def get_meta_fields():
+    @classmethod
+    def get_meta_fields(cls):
         return []
 
-    @staticmethod
-    def get_validation_error():
-        return TypeError('values of AnySeries and children must be list')
+    def get_errors(self):
+        if not isinstance(self.values, list):
+            yield 'Values must be a list'
 
-    def is_valid(self):
-        return isinstance(self.values, list)
-
-    def copy(self):
-        return self.__class__(
-            values=self.values.copy(),
-        )
-
-    def new(self):
-        return self.__class__(
-            values=list(),
-        )
+    def get_value_series(self):
+        return self
 
     def get_values(self):
         return self.values
 
     def set_values(self, values):
-        new = self.new()
+        new = self.copy()
         new.values = list(values)
         return new
 
     def get_items(self):
-        return self.values
+        return self.get_values()
 
     def set_items(self, items):
-        result = self.new()
-        result.values = list(items)
-        return result
-
-    def get_iter(self):
-        yield from self.get_items()
-
-    def get_list(self):
-        return list(self.get_items())
+        return self.set_values(items)
 
     def get_count(self):
         return len(self.get_values())
@@ -157,9 +143,9 @@ class AnySeries(AbstractSeries):
 
     def add(self, series, to_the_begin=False):
         if to_the_begin:
-            values = series.get_list() + self.get_list()
+            values = series.get_values() + self.get_values()
         else:
-            values = self.get_list() + series.get_list()
+            values = self.get_values() + series.get_values()
         return self.__class__(values=values)
 
     def filter(self, function):
