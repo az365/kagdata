@@ -1,19 +1,9 @@
-import math
-import numpy as np
-
-
 try:  # Assume we're a sub-module in a package.
     from series.abstract_series import AbstractSeries
+    from utils import numeric as nm
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
     from ..series.abstract_series import AbstractSeries
-
-
-def is_defined(value):
-    return value is not None and value is not np.nan and not math.isnan(value)
-
-
-def is_nonzero(value):
-    return (value or 0) > 0 or (value or 0) < 0
+    from ..utils import numeric as nm
 
 
 class AnySeries(AbstractSeries):
@@ -183,10 +173,10 @@ class AnySeries(AbstractSeries):
         )
 
     def filter_values_defined(self):
-        return self.filter_values(is_defined)
+        return self.filter_values(nm.is_defined)
 
     def filter_values_nonzero(self):
-        return self.filter_values(is_nonzero())
+        return self.filter_values(nm.is_nonzero)
 
     def condition_values(self, function):
         return self.map_values(

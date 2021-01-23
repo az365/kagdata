@@ -1,13 +1,9 @@
 try:  # Assume we're a sub-module in a package.
-    from series.any_series import (
-        AnySeries,
-        is_defined,
-    )
+    from series.any_series import AnySeries
+    from utils import numeric as nm
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
-    from ..series.any_series import (
-        AnySeries,
-        is_defined,
-    )
+    from ..series.any_series import AnySeries
+    from ..utils import numeric as nm
 
 
 class KeyValueSeries(AnySeries):
@@ -163,10 +159,10 @@ class KeyValueSeries(AnySeries):
         return self.filter_pairs(lambda k, v: function(v))
 
     def filter_values_defined(self):
-        return self.filter_values(is_defined)
+        return self.filter_values(nm.is_defined)
 
     def filter_keys_defined(self):
-        return self.filter_keys(is_defined)
+        return self.filter_keys(nm.is_defined)
 
     def filter_keys_between(self, key_min, key_max):
         return self.filter_keys(lambda k: key_min <= k <= key_max)
