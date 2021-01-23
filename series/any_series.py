@@ -1,9 +1,14 @@
 try:  # Assume we're a sub-module in a package.
     from series.abstract_series import AbstractSeries
+    import series_classes as sc
     from utils import numeric as nm
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
     from ..series.abstract_series import AbstractSeries
+    from .. import series_classes as sc
     from ..utils import numeric as nm
+
+
+DEFAULT_SORTED = False
 
 
 class AnySeries(AbstractSeries):
@@ -217,3 +222,55 @@ class AnySeries(AbstractSeries):
 
     def to_numeric(self):
         return self.map_values(float).assume_numeric()
+
+    def assume_dates(self, validate=False, sort_items=True):
+        return sc.DateSeries(
+            self.get_values(),
+            validate=validate,
+            sort_items=sort_items,
+        )
+
+    def to_dates(self, as_iso_date=False):
+        return sc.DateSeries(
+            self.get_values(),
+            validate=False,
+            sort_items=False,
+        ).to_dates(
+            as_iso_date=as_iso_date,
+        )
+
+    def assume_unsorted(self):
+        return self
+
+    def assume_sorted(self):
+        return sc.SortedSeries(
+            self.get_values(),
+            sort_items=False,
+            validate=False,
+        )
+
+    def sort(self):
+        return sc.SortedSeries(
+            self.get_values(),
+            sort_items=True,
+            validate=False,
+        )
+
+    def is_sorted(self, check=True):
+        if check:
+            prev = None
+            for v in self.get_values():
+                if prev is not None:
+                    if v < prev:
+                        return False
+                prev = v
+            return True
+        else:
+            return DEFAULT_SORTED
+
+    @staticmethod
+    def get_names():
+        return ['value']
+
+    def get_dataframe(self):
+        return nm.get_dataframe(self.get_values(), columns=self.get_names())
