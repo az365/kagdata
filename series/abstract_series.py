@@ -28,11 +28,16 @@ class AbstractSeries(ABC):
     def set_meta(self, dict_meta, inplace=False):
         if inplace:
             for k, v in dict_meta.items():
+                if hasattr(v, 'copy'):
+                    v = v.copy()
                 self.__dict__[k] = v
         else:
             new = self.copy()
             new.set_meta(dict_meta, inplace=True)
             return new
+
+    def get_class_name(self):
+        return self.__class__.__name__
 
     def new(self, *args, save_meta=False, **kwargs):
         new = self.__class__(*args, **kwargs)

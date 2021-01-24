@@ -1,136 +1,86 @@
 try:  # Assume we're a sub-module in a package.
-    from series.any_series import AnySeries
-    from series.key_value_series import KeyValueSeries
+    import series_classes as sc
     from utils import dates as dt
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
-    from ..series.any_series import AnySeries
-    from ..series.key_value_series import KeyValueSeries
+    from .. import series_classes as sc
     from ..utils import dates as dt
 
 
-class DateNumericSeries(KeyValueSeries):
+class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
     def __init__(
             self,
-            dates=[],
+            keys=[],
             values=[],
-            is_sorted=False,
+            validate=False,
+            sort_items=True,
     ):
         super().__init__(
-            keys=dates,
+            keys=keys,
             values=values,
-            is_sorted=is_sorted,
+            sort_items=False,
+            validate=False,
         )
         self.cached_yoy = None
+        if sort_items:
+            self.sort_by_keys(inplace=True)
+        if validate:
+            self.validate()
+
+    def get_errors(self):
+        yield from self.assume_not_numeric().get_errors()
+        if not self.date_series().is_valid():
+            yield 'Keys of {} must be sorted dates'.format(self.get_class_name())
+        if not self.value_series().is_valid():
+            yield 'Values of {} must be numeric'.format(self.get_class_name())
+
+    @staticmethod
+    def get_distance_func():
+        return sc.DateSeries.get_distance_func()
 
     def get_dates(self, as_date_type=None):
         if as_date_type:
-            return self.key_series().map(dt.to_date).get_values()
+            return self.date_series().map(dt.to_date).get_values()
         else:
             return self.get_keys()
 
-    def get_first_date(self):
-        if self.is_sorted:
-            return self.get_first_key()
-        else:
-            return min(self.get_dates())
-
-    def get_last_date(self):
-        if self.is_sorted:
-            return self.get_last_key()
-        else:
-            return max(self.get_dates())
-
-    def get_period_days(self):
-        return dt.get_days_between(
-            self.get_first_date(),
-            self.get_last_date(),
+    def set_dates(self, dates):
+        return self.new(
+            keys=dates,
+            values=self.get_values(),
+            save_meta=True,
+            sort_items=False,
+            validate=False,
         )
 
-    def exclude(self, first_date, last_date):
-        return self.filter_keys(lambda d: d < first_date or d > last_date)
+    def filter_dates(self, function):
+        return self.filter_keys(function)
 
-    def period(self, first_date, last_date):
-        return self.filter_keys(lambda d: first_date <= d <= last_date)
+    def get_numeric_keys(self):
+        return self.to_days().get_keys()
 
-    def cropped(self, left_days, right_days):
-        return self.period(
-            dt.get_shifted_date(self.get_first_date(), days=abs(left_days)),
-            dt.get_shifted_date(self.get_last_date(), days=-abs(right_days)),
-        )
+    def numeric_key_series(self):
+        return self.to_days().key_series()
 
-    def first_year(self):
-        date_a = self.get_first_date()
-        date_b = dt.get_next_year_date(date_a)
-        return self.period(date_a, date_b)
+    def key_series(self):
+        return self.date_series()
 
-    def last_year(self):
-        date_b = self.get_last_date()
-        date_a = dt.get_next_year_date(date_b, increment=-1)
-        return self.period(date_a, date_b)
+    def value_series(self):
+        return super().value_series().assume_numeric()
 
-    def shift(self, distance):
-        return self.shift_dates(distance)
-
-    def shift_dates(self, distance):
-        return self.map_keys(lambda d: dt.get_shifted_date(d, days=distance))
-
-    def yearly_shift(self):
-        return self.map_keys(dt.get_next_year_date())
+    def round_to_weeks(self):
+        return self.map_dates(dt.get_monday_date).mean_by_keys()
 
     def round_to_months(self):
-        self.map_keys(dt.get_month_first_date).mean_by_keys()
-
-    def get_distance_series(self, date, take_abs=True):
-        distance_series = self.__class__(
-            self.key_series(),
-            self.key_series().map(lambda d: dt.get_days_between(date, d, take_abs)),
-            is_sorted=self.is_sorted,
-        )
-        return distance_series
-
-    def get_distance_for_nearest_date(self, date, take_abs=True):
-        nearest_date = self.get_nearest_date(date)
-        return dt.get_days_between(date, nearest_date, take_abs)
-
-    def get_nearest_date(self, date):
-        if self.get_count() == 0:
-            return None
-        elif self.get_count() == 1:
-            return self.get_first_key()
-        elif self.is_sorted:
-            prev_date = None
-            prev_distance = None
-            for cur_date in self.get_keys():
-                if cur_date == date:
-                    return cur_date
-                else:
-                    cur_distance = abs(dt.get_days_between(cur_date, date))
-                    if prev_distance is not None:
-                        if cur_distance > prev_distance:
-                            return prev_date
-                    prev_date = cur_date
-                    prev_distance = cur_distance
-            return cur_date
-        else:
-            return self.get_distance_series(date, take_abs=True).get_arg_min()
-
-    def get_two_nearest_dates(self, date):
-        if self.get_count() < 2:
-            return None
-        else:
-            distance_series = self.get_distance_series(date, take_abs=False)
-            if not distance_series.is_sorted:
-                distance_series = distance_series.sort_by_keys()
-            date_a = distance_series.filter_values(lambda v: v < 0).get_arg_max()
-            date_b = distance_series.filter_values(lambda v: v >= 0).get_arg_min()
-            return date_a, date_b
+        return self.map_dates(dt.get_month_first_date).mean_by_keys()
 
     def get_segment_for_date(self, date):
         nearest_dates = [i for i in self.get_two_nearest_dates(date) if i]
         return self.new().from_items(
             [(d, self.get_value(d)) for d in nearest_dates],
-            is_sorted=True,
         )
+
+    def get_nearest_value(self, value, distance_func=None):
+        return self.value_series().get_nearest_value(value, distance_func)
 
     def get_linear_interpolated_value(self, date, near_for_outside=True):
         segment = self.get_segment_for_date(date)
@@ -140,7 +90,7 @@ class DateNumericSeries(KeyValueSeries):
         elif segment.get_count() == 2:
             [(date_a, value_a), (date_b, value_b)] = segment.get_list()
             segment_days = segment.get_period_days()
-            distance_days = dt.get_days_between(date_a, date)
+            distance_days = self.get_distance_func()(date_a, date)
             interpolated_value = value_a + (value_b - value_a) * distance_days / segment_days
             return interpolated_value
 
@@ -157,11 +107,9 @@ class DateNumericSeries(KeyValueSeries):
             return self.get_linear_interpolated_value(date)
 
     def interpolate(self, dates, use_spline=False):
-        result = self.save_meta()
+        result = self.new(save_meta=True)
         for d in dates:
             result.append_pair(d, self.get_interpolated_value(d, use_spline=use_spline))
-        if dates == sorted(dates):
-            result.is_sorted = True
         return result
 
     def interpolate_to_weeks(self, use_spline=True):
@@ -180,19 +128,19 @@ class DateNumericSeries(KeyValueSeries):
         window_days_is_even = half_window_days == int_half_window_days
         left_days = int_half_window_days
         right_days = int_half_window_days if window_days_is_even else int_half_window_days + 1
-        result = self.save_meta()
+        result = self.new(save_meta=True)
         if for_full_window_only:
-            dates = self.cropped(left_days, right_days).get_dates()
+            dates = self.crop(left_days, right_days).get_dates()
         else:
             dates = self.get_dates()
         for center_date in dates:
-            window - self.period(
-                dt.get_shifted_date(d, -left_days),
-                dt.get_shifted_date(d, right_days),
+            window = self.span(
+                dt.get_shifted_date(center_date, -left_days),
+                dt.get_shifted_date(center_date, right_days),
             )
             if input_as_dict:
                 window = window.get_dict()
-            result.append_pair(d, function(window))
+            result.append_pair(center_date, function(window))
         return result
 
     def apply_interpolated_window_series_function(
@@ -202,11 +150,11 @@ class DateNumericSeries(KeyValueSeries):
             input_as_list=False,
             for_full_window_only=False,
     ):
-        result = self.save_meta()
+        result = self.new(save_meta=True)
         left_days = min(window_days_list)
         right_days = max(window_days_list)
         if for_full_window_only:
-            dates = self.cropped(left_days, right_days).get_dates()
+            dates = self.crop(left_days, right_days).get_dates()
         else:
             dates = self.get_dates()
         for d in dates:
@@ -228,8 +176,8 @@ class DateNumericSeries(KeyValueSeries):
         )
 
     def math(self, series, function, use_spline=False):
-        assert isinstance(series, DateNumericSeries)
-        result = self.save_meta()
+        assert isinstance(series, sc.DateSeries)
+        result = self.new(save_meta=True)
         for d, v in self.get_items():
             if v is not None:
                 v0 = series.get_interpolated_value(d, use_spline=use_spline)

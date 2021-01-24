@@ -1,68 +1,56 @@
 try:  # Assume we're a sub-module in a package.
-    from series.any_series import AnySeries
+    import series_classes as sc
     from utils import numeric as nm
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
-    from ..series.any_series import AnySeries
+    from .. import series_classes as sc
     from ..utils import numeric as nm
 
 
-class KeyValueSeries(AnySeries):
+class KeyValueSeries(sc.AnySeries):
     def __init__(
             self,
             keys=[],
             values=[],
-            is_sorted=False,
+            validate=True,
     ):
-        self.keys = keys.get_values() if isinstance(keys, AnySeries) else list(keys)
-        self.is_sorted = is_sorted
+        self.keys = keys.get_values() if isinstance(keys, sc.AnySeries) else list(keys)
         super().__init__(
             values=values,
+            validate=validate
         )
 
+    def get_errors(self):
+        yield from super().get_errors()
+        if not self.has_valid_counts():
+            yield 'Keys and values count for {} must be similar'.format(self.get_class_name())
+
+    def has_valid_counts(self):
+        return len(self.get_keys()) == len(self.get_values())
+
+    @staticmethod
+    def get_data_fields(cls):
+        return 'keys', 'values'
+
     @classmethod
-    def from_items(cls, items, is_sorted=False):
+    def from_items(cls, items):
         series = cls()
-        for i in items:
-            series.append_pair(*i)
-        series.is_sorted = is_sorted
+        for k, v in items:
+            series.get_keys().append(k)
+            series.get_values().append(v)
         return series
 
     @classmethod
     def from_dict(cls, my_dict):
         series = cls()
         for k in sorted(my_dict):
-            series.append_pair(k, my_dict[k])
-        series.is_sorted = True
-        return series
-
-    def copy(self):
-        return self.__class__(
-            keys=self.keys.copy(),
-            values=self.values.copy(),
-            is_sorted=self.is_sorted,
-        )
-
-    def save_meta(self):
-        return self.new(
-            is_sorted=self.is_sorted,
-        )
-
-    def is_valid(self):
-        return len(self.keys) == len(self.values)
-
-    def validate(self, raise_exceptions=True):
-        if self.is_valid():
-            return self
-        elif raise_exceptions:
-            raise TypeError('Count of keys and values is not similar.')
-        else:
-            return None
+            series.append_pair(k, my_dict[k], inplace=True)
+        return series.assume_sorted()
 
     def key_series(self):
-        return AnySeries(self.keys)
+        return sc.AnySeries(self.get_keys())
 
     def value_series(self):
-        return AnySeries(self.values)
+        return sc.AnySeries(self.get_values())
 
     def get_value(self, key, default=None):
         return self.get_dict().get(key, default)
@@ -70,41 +58,20 @@ class KeyValueSeries(AnySeries):
     def get_keys(self):
         return self.keys
 
+    def set_keys(self, keys):
+        self.new(
+            keys=keys,
+            values=self.get_values(),
+        )
+
     def get_items(self):
-        return zip(self.keys, self.values)
+        return zip(self.get_keys(), self.get_values())
+
+    def set_items(self, items):
+        return self.from_items(items)
 
     def get_dict(self):
         return dict(self.get_items())
-
-    def get_first_key(self):
-        if self.get_count():
-            return self.get_keys()[0]
-
-    def get_last_key(self):
-        if self.get_count():
-            return self.get_keys()[-1]
-
-    def get_first_value(self):
-        if self.get_count():
-            return self.get_values()[0]
-
-    def get_last_value(self):
-        if self.get_count():
-            return self.get_values()[-1]
-
-    def get_first_item(self):
-        return self.get_first_key(), self.get_first_value()
-
-    def get_last_item(self):
-        return self.get_last_key(), self.get_last_value()
-
-    def get_borders(self):
-        result = self.__class__.from_items(
-            self.get_first_item(),
-            self.get_last_item(),
-        )
-        result.is_sorted = self.is_sorted
-        return result
 
     def get_arg_min(self):
         min_value = None
@@ -124,22 +91,34 @@ class KeyValueSeries(AnySeries):
                 key_for_max_value = k
         return key_for_max_value
 
-    def append(self, item, return_series=False):
+    def append(self, item, inplace):
         assert len(item) == 2, 'Len of pair mus be 2 (got {})'.format(item)
         key, value = item
-        return self.append_pair(key, value, return_series)
+        return self.append_pair(key, value, inplace)
 
-    def append_pair(self, key, value, return_series=False):
-        self.keys.append(key)
-        self.values.append(value)
-        if return_series:
-            return self
+    def append_pair(self, key, value, inplace):
+        if inplace:
+            self.get_keys().append(key)
+            self.get_values().append(value)
+        else:
+            new = self.copy()
+            new.get_keys().append(key)
+            new.get_values().append(value)
+            return new
 
-    def add(self, pair_series, return_series=True):
-        for i in pair_series.get_items():
-            self.append_pair(*i)
-        if return_series:
-            return self
+    def add(self, key_value_series, to_the_begin=False):
+        assert isinstance(key_value_series, sc.KeyValueSeries)
+        if to_the_begin:
+            keys = key_value_series.get_keys() + self.get_keys()
+            values = key_value_series.get_values() + self.get_values()
+        else:
+            keys = self.get_values() + key_value_series.get_keys()
+            values = self.get_values() + key_value_series.get_values()
+        return self.new(
+            keys=keys,
+            values=values,
+            save_meta=True,
+        )
 
     def filter_pairs(self, function):
         keys, values = list(), list()
@@ -147,9 +126,9 @@ class KeyValueSeries(AnySeries):
             if function(k, v):
                 keys.append(k)
                 values.append(v)
-        return self.__class__(
-            keys, values,
-            is_sorted=self.is_sorted,
+        return self.new(
+            keys=keys,
+            values=values,
         )
 
     def filter_keys(self, function):
@@ -168,17 +147,37 @@ class KeyValueSeries(AnySeries):
         return self.filter_keys(lambda k: key_min <= k <= key_max)
 
     def map_keys(self, function, sorting_changed=False):
-        for n in self.get_range_numbers():
-            self.keys[n] = function(self.keys[n])
-        if sorting_changed:
-            self.is_sorted = False
-        return self
-
-    def sort_by_keys(self, reverse=False):
-        return __class__().from_items(
-            sorted(self.get_items(), reverse=reverse),
-            is_sorted=not reverse,
+        return self.set_keys(
+            self.key_series().map(function),
         )
+
+    def assume_date_numeric(self):
+        return sc.DateNumericSeries(
+            **self.get_properties()
+        )
+
+    def assume_sorted(self):
+        return sc.SortedKeyValueSeries(
+            **self.get_properties()
+        )
+
+    def is_sorted(self, check=True):
+        return self.key_series().is_sorted(check=check)
+
+    def sort_by_keys(self, reverse=False, inplace=False):
+        if inplace:
+            items = sorted(zip(self.get_keys(), self.get_values()), reverse=reverse)
+            for k, v in items:
+                self.get_keys().append(k)
+                self.get_values().append(v)
+        else:
+            result = self.__class__.from_items(
+                sorted(self.get_items(), reverse=reverse),
+            )
+            if reverse:
+                return result
+            else:
+                return result.assume_sorted()
 
     def group_by_keys(self):
         dict_groups = dict()
@@ -187,7 +186,22 @@ class KeyValueSeries(AnySeries):
         return __class__().from_dict(dict_groups)
 
     def sum_by_keys(self):
-        self.group_by_keys().map(sum)
+        return self.group_by_keys().map(sum)
 
     def mean_by_keys(self):
-        self.group_by_keys().map(lambda a: AnySeries(a).filter_values_defined().get_mean())
+        return self.group_by_keys().map(
+            lambda a: sc.AnySeries(a).filter_values_defined().get_mean(),
+        )
+
+    @staticmethod
+    def get_names():
+        return 'key', 'value'
+
+    def get_dataframe(self):
+        return nm.get_dataframe(
+            data=self.get_list(),
+            columns=self.get_names(),
+        )
+
+    def plot(self, fmt='-'):
+        nm.plot(self.get_keys(), self.get_values(), fmt=fmt)
