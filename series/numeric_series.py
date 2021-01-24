@@ -6,6 +6,8 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     from ..utils import numeric as nm
 
 
+DEFAULT_NUMERIC = True
+
 WINDOW_DEFAULT = (-1, 0, 1)
 WINDOW_WO_CENTER = (-2, -1, 0, 1, 2)
 WINDOW_NEIGHBORS = (-1, 0)
@@ -22,10 +24,14 @@ class NumericSeries(sc.AnySeries):
             validate=validate,
         )
 
+    @staticmethod
+    def get_distance_func():
+        return lambda c, v: v - c
+
     def get_errors(self):
         yield from super().get_errors()
         if not self.has_valid_items():
-            yield 'Values of NumericSeries must be numeric'
+            yield 'Values of {} must be numeric'.format(self.get_class_name())
 
     def has_valid_items(self):
         for v in self.get_values():
@@ -33,9 +39,11 @@ class NumericSeries(sc.AnySeries):
                 return False
         return True
 
-    @staticmethod
-    def get_distance_func():
-        return lambda c, v: v - c
+    def is_numeric(self, check=False):
+        if check:
+            return self.has_valid_items()
+        else:
+            return DEFAULT_NUMERIC
 
     def get_sum(self):
         return sum(
@@ -78,7 +86,7 @@ class NumericSeries(sc.AnySeries):
                 self.shift(-1)
             )
 
-    def get_sliding_window(self, window=[-1, 0, 1], extend=True, default=None, as_series=True):
+    def get_sliding_window(self, window=WINDOW_DEFAULT, extend=True, default=None, as_series=True):
         if extend:
             n_min = 0
             n_max = self.get_count()
@@ -93,7 +101,7 @@ class NumericSeries(sc.AnySeries):
                 yield self.value_series().get_items_no(sliding_window, extend=extend, default=default)
 
     def apply_window_func(self, function, window=WINDOW_DEFAULT, extend=True, default=None, as_series=False):
-        return self.copy().set_items(
+        return self.copy().set_values(
             map(function, self.get_sliding_window(window, extend=extend, default=default, as_series=as_series))
         )
 
@@ -126,12 +134,12 @@ class NumericSeries(sc.AnySeries):
         for n in self.get_range_numbers():
             is_edge = n < center or n >= count - center
             if is_edge:
-                result.append(self.get_item_no(n))
+                result.append(self.get_item_no(n), inplace=True)
             else:
                 sub_series = self.slice(n - center, n + center + 1)
                 if exclude_center:
                     sub_series = sub_series.drop_item_no(center)
-                result.append(sub_series.get_mean())
+                result.append(sub_series.get_mean(), inplace=True)
         return result
 
     def smooth(self, how='linear', *args, **kwargs):
@@ -166,7 +174,7 @@ class NumericSeries(sc.AnySeries):
         )
 
     def mark_spikes(self, threshold, window=WINDOW_NEIGHBORS, local_min=False, local_max=True):
-        deviation = self.deviation_from_neighbors(window=window, rel=False)
+        deviation = self.deviation_from_neighbors(window=window, rel=True)
         if local_min or local_max:
             deviation = deviation.map_zip_values(
                 lambda x, m: x if m else None,

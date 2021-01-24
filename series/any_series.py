@@ -8,6 +8,7 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     from ..utils import numeric as nm
 
 
+DEFAULT_NUMERIC = False
 DEFAULT_SORTED = False
 
 
@@ -87,7 +88,13 @@ class AnySeries(AbstractSeries):
         return self.get_list()[n_start: n_end]
 
     def slice(self, n_start, n_end):
-        return self.new().set_items(self.get_items_from_to(n_start, n_end))
+        return self.new(save_meta=True).set_items(self.get_items_from_to(n_start, n_end))
+
+    def crop(self, left_count, right_count):
+        return self.slice(
+            n_start=left_count,
+            n_end=self.get_count() - right_count,
+        )
 
     def items_no(self, numbers, extend=False, default=None):
         return self.new().set_items(
@@ -123,7 +130,7 @@ class AnySeries(AbstractSeries):
         else:
             return self.slice(n_start=-distance, n_end=self.get_count())
 
-    def append(self, value, inplace=True):
+    def append(self, value, inplace):
         if inplace:
             self.values.append(value)
         else:
@@ -140,7 +147,7 @@ class AnySeries(AbstractSeries):
 
     def insert(self, pos, value, inplace=False):
         if inplace:
-            self.values.copy().insert(pos, value)
+            self.values.insert(pos, value)
         else:
             new = self.copy()
             new.insert(pos, value, inplace=True)
@@ -151,7 +158,7 @@ class AnySeries(AbstractSeries):
             values = series.get_values() + self.get_values()
         else:
             values = self.get_values() + series.get_values()
-        return self.__class__(values=values)
+        return self.set_values(values=values)
 
     def filter(self, function):
         return self.new().set_items(
@@ -175,13 +182,13 @@ class AnySeries(AbstractSeries):
         )
 
     def map(self, function):
-        return self.set_values(
+        return self.set_items(
             map(function, self.get_items()),
         )
 
     def map_values(self, function):
         return self.set_values(
-            map(function, self.get_values())
+            map(function, self.get_values()),
         )
 
     def map_zip_values(self, function, *series):
@@ -223,11 +230,10 @@ class AnySeries(AbstractSeries):
     def to_numeric(self):
         return self.map_values(float).assume_numeric()
 
-    def assume_dates(self, validate=False, sort_items=True):
+    def assume_dates(self, validate=False):
         return sc.DateSeries(
             self.get_values(),
             validate=validate,
-            sort_items=sort_items,
         )
 
     def to_dates(self, as_iso_date=False):
@@ -267,6 +273,12 @@ class AnySeries(AbstractSeries):
             return True
         else:
             return DEFAULT_SORTED
+
+    def is_numeric(self, check=False):
+        if check:
+            return self.assume_numeric(validate=False).has_valid_items()
+        else:
+            return DEFAULT_NUMERIC
 
     @staticmethod
     def get_names():

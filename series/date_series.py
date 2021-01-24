@@ -6,6 +6,10 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     from ..utils import dates as dt
 
 
+DEFAULT_NUMERIC = False
+DEFAULT_SORTED = True
+
+
 class DateSeries(sc.SortedSeries):
     def __init__(
             self,
@@ -22,7 +26,7 @@ class DateSeries(sc.SortedSeries):
     def get_errors(self):
         yield from super().get_errors()
         if not self.has_valid_dates():
-            yield 'Values of DateSeries must be python-dates or iso-dates'
+            yield 'Values of {} must be python-dates or iso-dates'.format(self.get_class_name())
 
     def has_valid_dates(self):
         for d in self.get_dates():
@@ -37,6 +41,16 @@ class DateSeries(sc.SortedSeries):
     @staticmethod
     def get_distance_func():
         return dt.get_days_between
+
+    @staticmethod
+    def is_numeric():
+        return DEFAULT_NUMERIC
+
+    def is_dates(self, check=False):
+        if check:
+            return self.has_valid_dates()
+        else:
+            return True
 
     def get_dates(self, as_date_type=False):
         if as_date_type:
@@ -93,7 +107,7 @@ class DateSeries(sc.SortedSeries):
             *self.get_border_dates()
         )
 
-    def get_date_in_range(self, date):
+    def has_date_in_range(self, date):
         return self.get_first_date() <= date <= self.get_last_date()
 
     def map_dates(self, function):
@@ -136,17 +150,17 @@ class DateSeries(sc.SortedSeries):
         return self.map_dates(dt.get_next_year_date)
 
     def round_to_weeks(self):
-        self.map_dates(dt.get_monday_date).uniq()
+        return self.map_dates(dt.get_monday_date).uniq()
 
     def round_to_months(self):
-        self.map_dates(dt.get_month_first_date).uniq()
+        return self.map_dates(dt.get_month_first_date).uniq()
 
-    def distance(self, d, take_abs):
+    def distance(self, d, take_abs=True):
         got_one_date = isinstance(d, (str, dt.date))
         if got_one_date:
             return self.distance_for_date(d, take_abs=take_abs)
         else:
-            date_series = DateSeries(d, validate=False, sort_items=False)
+            date_series = self.new(d, validate=False, sort_items=False)
             distance_series = sc.DateNumericSeries(
                 self.get_dates(),
                 self.date_series().map(lambda i: date_series.get_distance_for_nearest_date(i, take_abs)),
@@ -157,13 +171,13 @@ class DateSeries(sc.SortedSeries):
     def distance_for_date(self, date, take_abs=True):
         distance_series = sc.DateNumericSeries(
             self.get_dates(),
-            self.date_series().map(lambda d: dt.get_days_between(date, d, take_abs)),
+            self.date_series().map(lambda d: self.get_distance_func()(date, d, take_abs)),
         )
         return distance_series
 
     def get_distance_for_nearest_date(self, date, take_abs=True):
         nearest_date = self.get_nearest_date(date)
-        return dt.get_days_between(date, nearest_date, take_abs)
+        return self.get_distance_func()(date, nearest_date, take_abs)
 
     def get_nearest_date(self, date, distance_func=None):
         return self.date_series().get_nearest_value(
@@ -175,9 +189,7 @@ class DateSeries(sc.SortedSeries):
         if self.get_count() < 2:
             return None
         else:
-            distance_series = self.distance(date, take_abs=False)
-            if not distance_series.is_sorted:
-                distance_series = distance_series.sort_by_keys()
+            distance_series = self.date_series().distance(date, take_abs=False)
             date_a = distance_series.filter_values(lambda v: v < 0).get_arg_max()
             date_b = distance_series.filter_values(lambda v: v >= 0).get_arg_min()
             return date_a, date_b
