@@ -6,6 +6,10 @@ except ImportError:  # Apparently no higher-level package has been imported, fal
     from ..utils import numeric as nm
 
 
+DEFAULT_NUMERIC = True
+DEFAULT_SORTED = True
+
+
 class SortedNumericSeries(sc.SortedSeries, sc.NumericSeries):
     def __init__(
             self,
@@ -29,12 +33,17 @@ class SortedNumericSeries(sc.SortedSeries, sc.NumericSeries):
             **self.get_data()
         )
 
+    def get_range_len(self):
+        return self.get_distance_func()(
+            *self.get_borders()
+        )
+
     def distance(self, v, take_abs=True):
         got_one_value = isinstance(v, (int, float))
         if got_one_value:
             return self.distance_for_value(v, take_abs=take_abs)
         else:
-            series = self.new(v, validate=False, sort_items=False)
+            series = self.new(v, validate=False, sort_items=True)
             distance_series = sc.SortedNumericKeyValueSeries(
                 self.get_values(),
                 self.value_series().map(lambda i: series.get_distance_for_nearest_value(i, take_abs)),
@@ -50,8 +59,8 @@ class SortedNumericSeries(sc.SortedSeries, sc.NumericSeries):
         return distance_series
 
     def get_distance_for_nearest_value(self, value, take_abs=True):
-        nearest_value = self.value_series().get_nearest_value(value)
-        return self.get_distance_func()(value, nearest_value, take_abs)
+        nearest_value = self.get_nearest_value(value)
+        return self.value_series().get_distance_func()(value, nearest_value, take_abs)
 
     def get_nearest_value(self, value, distance_func=None):
         distance_func = distance_func or self.get_distance_func()

@@ -1,9 +1,14 @@
 try:  # Assume we're a sub-module in a package.
     import series_classes as sc
     from utils import dates as dt
+    from utils import numeric as nm
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
     from .. import series_classes as sc
     from ..utils import dates as dt
+    from ..utils import numeric as nm
+
+
+WINDOW_WEEKLY_DEFAULT = (-7, 0, 7)
 
 
 class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
@@ -17,14 +22,10 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
         super().__init__(
             keys=keys,
             values=values,
-            sort_items=False,
-            validate=False,
+            sort_items=sort_items,
+            validate=validate,
         )
         self.cached_yoy = None
-        if sort_items:
-            self.sort_by_keys(inplace=True)
-        if validate:
-            self.validate()
 
     def get_errors(self):
         yield from self.assume_not_numeric().get_errors()
@@ -36,6 +37,12 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
     @staticmethod
     def get_distance_func():
         return sc.DateSeries.get_distance_func()
+
+    def assume_numeric(self, validate=False):
+        return sc.SortedNumericKeyValueSeries(
+            validate=validate,
+            **self.get_data()
+        )
 
     def get_dates(self, as_date_type=None):
         if as_date_type:
@@ -73,48 +80,46 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
     def round_to_months(self):
         return self.map_dates(dt.get_month_first_date).mean_by_keys()
 
-    def get_segment_for_date(self, date):
+    def get_segment(self, date):
         nearest_dates = [i for i in self.get_two_nearest_dates(date) if i]
         return self.new().from_items(
             [(d, self.get_value(d)) for d in nearest_dates],
         )
 
     def get_nearest_value(self, value, distance_func=None):
-        return self.value_series().get_nearest_value(value, distance_func)
+        return self.value_series().sort().get_nearest_value(value, distance_func)
 
-    def get_linear_interpolated_value(self, date, near_for_outside=True):
-        segment = self.get_segment_for_date(date)
-        if segment.get_count() == 1:
-            if near_for_outside:
-                return segment.get_first_value()
-        elif segment.get_count() == 2:
-            [(date_a, value_a), (date_b, value_b)] = segment.get_list()
-            segment_days = segment.get_period_days()
-            distance_days = self.get_distance_func()(date_a, date)
-            interpolated_value = value_a + (value_b - value_a) * distance_days / segment_days
-            return interpolated_value
-
-    def get_spline_interpolated_value(self, date):
-        raise NotImplemented
-
-    def get_interpolated_value(self, date, use_spline=False):
-        value = self.get_value(date)
-        if value:
-            return value
-        if use_spline:
-            return self.get_spline_interpolated_value(date)
+    def get_interpolated_value(self, date, how='linear', *args, **kwargs):
+        method_name = 'get_{}_interpolated_value'.format(how)
+        requires_numeric_keys = how in ('linear', 'spline')
+        if requires_numeric_keys:
+            numeric_series = self.to_days()
+            interpolation_method = numeric_series.__getattribute__(method_name)
+            numeric_key = dt.get_day_abs_from_date(date)
+            return interpolation_method(numeric_key, *args, **kwargs)
         else:
-            return self.get_linear_interpolated_value(date)
+            interpolation_method = self.__getattribute__(method_name)
+            return interpolation_method(date, *args, **kwargs)
 
-    def interpolate(self, dates, use_spline=False):
-        result = self.new(save_meta=True)
-        for d in dates:
-            result.append_pair(d, self.get_interpolated_value(d, use_spline=use_spline))
-        return result
+    def interpolate(self, dates, how='linear', *args, **kwargs):
+        method_name = '{}_interpolation'.format(how)
+        requires_numeric_keys = how in ('linear', 'spline')
+        if requires_numeric_keys:
+            interpolation_method = self.to_days().__getattribute__(method_name)
+            numeric_keys = sc.DateSeries(dates, sort_items=True).to_days()
+            interpolated_series = interpolation_method(numeric_keys, *args, **kwargs)
+            return self.new(
+                keys=numeric_keys,
+                values=interpolated_series.get_values(),
+                save_meta=False,
+            )
+        else:
+            interpolation_method = self.__getattribute__(method_name)
+            return interpolation_method(dates, *args, **kwargs)
 
-    def interpolate_to_weeks(self, use_spline=True):
+    def interpolate_to_weeks(self, how='spline', *args, **kwargs):
         monday_dates = dt.get_weeks_range(self.get_first_date(), self.get_last_date())
-        return self.interpolate(monday_dates, use_spline=use_spline)
+        return self.interpolate(monday_dates, how=how, *args, **kwargs)
 
     def apply_window_series_function(
             self,
@@ -140,7 +145,7 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
             )
             if input_as_dict:
                 window = window.get_dict()
-            result.append_pair(center_date, function(window))
+            result.append_pair(center_date, function(window), inplace=True)
         return result
 
     def apply_interpolated_window_series_function(
@@ -164,10 +169,10 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
             if None not in window_values or not for_full_window_only:
                 if input_as_list:
                     window = window_values
-                result.append_pair(d, function(window))
+                result.append_pair(d, function(window), inplace=True)
         return result
 
-    def smooth(self, window_days_list=[-7, 0, 7]):
+    def smooth_linear_by_days(self, window_days_list=WINDOW_WEEKLY_DEFAULT):
         return self.apply_interpolated_window_series_function(
             window_days_list=window_days_list,
             function=lambda s: s.get_mean(),
@@ -176,13 +181,13 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
         )
 
     def math(self, series, function, use_spline=False):
-        assert isinstance(series, sc.DateSeries)
+        assert isinstance(series, sc.DateNumericSeries)
         result = self.new(save_meta=True)
         for d, v in self.get_items():
             if v is not None:
                 v0 = series.get_interpolated_value(d, use_spline=use_spline)
                 if v0 is not None:
-                    result.append(d, function(v, v0))
+                    result.append_pair(d, function(v, v0), inplace=True)
         return result
 
     def yoy(self, use_spline=False):
@@ -205,8 +210,45 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
         else:
             return self.get_interpolated_value(date, use_spline=use_spline)
 
-    def extrapolate_by_yoy(self, date_min, date_max):
+    def extrapolate_by_yoy(self, dates, yoy, smooth_kwargs=None, use_spline=False):
+        if not yoy:
+            yoy = self.yoy()
+        if smooth_kwargs is not None:
+            yoy = yoy.smooth(**smooth_kwargs)
+        result = self.new()
+        for d in dates:
+            if self.has_date_in_range(d):
+                cur_value = self.get_interpolated_value(d, use_spline=use_spline)
+            else:
+                if d > self.get_last_date():
+                    increment = int(dt.get_days_between(self.get_last_date(), d) / dt.DAYS_IN_YEAR) + 1
+                else:
+                    increment = int(dt.get_days_between(self.get_first_date(), d) / dt.DAYS_IN_YEAR) + 1
+                base_date = dt.get_next_year_date(d, increment=-increment)
+                base_value = self.get_interpolated_value(base_date)
+                cur_yoy = yoy.get_interpolated_value(d, use_spline=use_spline)
+                cur_value = base_value * (1 + cur_yoy) ** increment
+            result.append_pair(d, cur_value, inplace=True)
+        return result
+
+    def extrapolate_by_stl(self, dates):
         raise NotImplemented
 
-    def extrapolate(self, date_min, date_max):
-        raise NotImplemented
+    def extrapolate(self, how='by_yoy', *args, **kwargs):
+        method_name = 'extrapolate_{}'.format(how)
+        extrapolation_method = self.__getattribute__(method_name)
+        return extrapolation_method(*args, **kwargs)
+
+    def derivative(self, extend=False, default=0):
+        return self.new(
+            keys=self.get_keys(),
+            values=self.value_series().derivative(extend=extend, default=default).get_values(),
+            sort_items=False, validate=False, save_meta=True,
+        )
+
+    @staticmethod
+    def get_names():
+        return ['date', 'value']
+
+    def plot(self, fmt='-'):
+        nm.plot(self.get_keys(), self.get_values(), fmt=fmt)

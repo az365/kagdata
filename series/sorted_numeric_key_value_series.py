@@ -37,7 +37,7 @@ class SortedNumericKeyValueSeries(sc.SortedKeyValueSeries, sc.SortedNumericSerie
 
     @classmethod
     def get_meta_fields(cls):
-        return 'cached_spline'
+        return list(super().get_meta_fields()) + ['cached_spline']
 
     def key_series(self):
         return sc.SortedNumericSeries(self.get_keys())
@@ -57,6 +57,14 @@ class SortedNumericKeyValueSeries(sc.SortedKeyValueSeries, sc.SortedNumericSerie
             **self.get_data()
         )
 
+    def get_range_len(self):
+        return self.get_distance_func()(
+            *self.key_series().get_borders()
+        )
+
+    def distance(self, v, take_abs=True):
+        return self.key_series().distance(v, take_abs)
+
     def get_nearest_key(self, key):
         return self.key_series().get_nearest_value(
             key,
@@ -72,8 +80,6 @@ class SortedNumericKeyValueSeries(sc.SortedKeyValueSeries, sc.SortedNumericSerie
             return None
         else:
             distance_series = self.distance(key, take_abs=False)
-            if not distance_series.is_sorted:
-                distance_series = distance_series.sort_by_keys()
             date_a = distance_series.filter_values(lambda v: v < 0).get_arg_max()
             date_b = distance_series.filter_values(lambda v: v >= 0).get_arg_min()
             return date_a, date_b
@@ -119,8 +125,30 @@ class SortedNumericKeyValueSeries(sc.SortedKeyValueSeries, sc.SortedNumericSerie
             if near_for_outside:
                 return segment.get_first_value()
         elif segment.get_count() == 2:
-            [(date_a, value_a), (date_b, value_b)] = segment.get_list()
-            segment_days = segment.get_period_days()
-            distance_days = self.get_distance_func()(date_a, key)
+            [(key_a, value_a), (key_b, value_b)] = segment.get_list()
+            segment_days = segment.get_range_len()
+            distance_days = self.get_distance_func()(key_a, key)
             interpolated_value = value_a + (value_b - value_a) * distance_days / segment_days
             return interpolated_value
+
+    def get_interpolated_value(self, key, how='linear', *args, **kwargs):
+        method_name = 'get_{}_interpolated_value'.format(how)
+        interpolation_method = self.__getattribute__(method_name)
+        return interpolation_method(key, *args, **kwargs)
+
+    def interpolate(self, keys, how='linear', *args, **kwargs):
+        method_name = '{}_interpolation'.format(how)
+        interpolation_method = self.__getattribute__(method_name)
+        return interpolation_method(keys, *args, **kwargs)
+
+    def linear_interpolation(self, keys, near_for_outside=True):
+        result = self.new(save_meta=True)
+        for k in keys:
+            result.append_pair(k, self.get_linear_interpolated_value(k, near_for_outside), inplace=True)
+        return result
+
+    def spline_interpolation(self, keys, default=None):
+        result = self.new(save_meta=True)
+        for k in keys:
+            result.append_pair(k, self.get_spline_interpolated_value(k, default), inplace=True)
+        return result

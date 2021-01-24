@@ -43,7 +43,7 @@ class DateSeries(sc.SortedSeries):
         return dt.get_days_between
 
     @staticmethod
-    def is_numeric():
+    def is_numeric(*_):
         return DEFAULT_NUMERIC
 
     def is_dates(self, check=False):
@@ -69,7 +69,7 @@ class DateSeries(sc.SortedSeries):
         )
 
     def to_days(self):
-        return self.map_dates(dt.get_day_abs_from_date)
+        return self.map_dates(dt.get_day_abs_from_date).assume_numeric()
 
     def date_series(self):
         return DateSeries(
@@ -102,7 +102,7 @@ class DateSeries(sc.SortedSeries):
         else:
             return DateSeries(self.get_border_dates())
 
-    def get_period_days(self):
+    def get_range_len(self):
         return self.get_distance_func()(
             *self.get_border_dates()
         )
@@ -156,24 +156,25 @@ class DateSeries(sc.SortedSeries):
         return self.map_dates(dt.get_month_first_date).uniq()
 
     def distance(self, d, take_abs=True):
-        got_one_date = isinstance(d, (str, dt.date))
-        if got_one_date:
-            return self.distance_for_date(d, take_abs=take_abs)
-        else:
+        if isinstance(d, (str, dt.date)):
+            distance_series = self.distance_for_date(d, take_abs=take_abs)
+        elif isinstance(d, sc.DateSeries):
             date_series = self.new(d, validate=False, sort_items=False)
             distance_series = sc.DateNumericSeries(
                 self.get_dates(),
                 self.date_series().map(lambda i: date_series.get_distance_for_nearest_date(i, take_abs)),
                 sort_items=False, validate=False,
             )
-            return distance_series
+        else:
+            raise TypeError('d-argument for distance-method must be date or DateSeries (got {}: {})'.format(type(d), d))
+        return distance_series
 
     def distance_for_date(self, date, take_abs=True):
-        distance_series = sc.DateNumericSeries(
+        return sc.DateNumericSeries(
             self.get_dates(),
             self.date_series().map(lambda d: self.get_distance_func()(date, d, take_abs)),
+            sort_items=False, validate=False,
         )
-        return distance_series
 
     def get_distance_for_nearest_date(self, date, take_abs=True):
         nearest_date = self.get_nearest_date(date)
@@ -194,7 +195,7 @@ class DateSeries(sc.SortedSeries):
             date_b = distance_series.filter_values(lambda v: v >= 0).get_arg_min()
             return date_a, date_b
 
-    def get_segment_for_date(self, date):
+    def get_segment(self, date):
         nearest_dates = [i for i in self.get_two_nearest_dates(date) if i]
         return self.new(nearest_dates)
 
