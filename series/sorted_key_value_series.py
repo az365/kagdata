@@ -17,10 +17,6 @@ class SortedKeyValueSeries(sc.KeyValueSeries, sc.SortedSeries):
             sort_items=True,
     ):
         super().__init__(
-            # keys=keys if isinstance(keys, sc.SortedSeries) else sc.SortedSeries(
-            #     keys, validate=False, sort_items=False,
-            # ),
-            # keys=keys.get_values() if isinstance(keys, sc.SortedSeries) else keys,
             keys=keys,
             values=values,
             validate=False,
@@ -37,17 +33,10 @@ class SortedKeyValueSeries(sc.KeyValueSeries, sc.SortedSeries):
 
     @classmethod
     def get_meta_fields(cls):
-        return 'cached_spline'
+        return list(super().get_meta_fields()) + ['cached_spline']
 
     def key_series(self):
         return sc.SortedSeries(self.get_keys())
-
-    # def get_nearest_key(self, key, distance_func):
-    #     return self.key_series().get_nearest_value(key, distance_func)
-    #
-    # def get_nearest_item(self, key, distance_func):
-    #     nearest_key = self.get_nearest_key(key, distance_func)
-    #     return nearest_key, self.get_value(nearest_key)
 
     def has_key_in_range(self, key):
         return self.get_first_key() <= key <= self.get_last_key()
@@ -60,24 +49,11 @@ class SortedKeyValueSeries(sc.KeyValueSeries, sc.SortedSeries):
         if self.get_count():
             return self.get_keys()[-1]
 
-    def get_first_value(self):
-        if self.get_count():
-            return self.get_values()[0]
-
-    def get_last_value(self):
-        if self.get_count():
-            return self.get_values()[-1]
-
     def get_first_item(self):
         return self.get_first_key(), self.get_first_value()
 
     def get_last_item(self):
         return self.get_last_key(), self.get_last_value()
-
-    def borders(self):
-        return self.__class__.from_items(
-            *self.get_border_keys()
-        )
 
     def get_border_keys(self):
         return [self.get_first_key(), self.get_last_key()]
@@ -139,38 +115,3 @@ class SortedKeyValueSeries(sc.KeyValueSeries, sc.SortedSeries):
 
     def span(self, first_key, last_key):
         return self.filter_keys(lambda k: first_key <= k <= last_key)
-
-    # # def slice(self, n_start, n_end):
-    # #     return self.filter_keys(lambda k: n_start <= k < n_end)
-    #
-    # def derivative(self):
-    #     return self.new(
-    #         keys=self.get_keys(),
-    #         values=self.value_series().assume_numeric().derivative(extend=True).get_values(),
-    #         sort_items=False, validate=False, save_meta=True,
-    #     )
-    #
-    # def get_spline_function(self, from_cache=True, to_cache=True):
-    #     if from_cache and self.cached_spline:
-    #         spline_function = self.cached_spline
-    #     else:
-    #         spline_function = nm.spline_interpolate(
-    #             self.get_keys(),
-    #             self.get_values(),
-    #         )
-    #         if to_cache:
-    #             self.cached_spline = spline_function
-    #     return spline_function
-    #
-    # def get_spline_interpolated_value(self, key, default=None):
-    #     if self.has_key_in_range(key):
-    #         spline_function = self.get_spline_function(from_cache=True, to_cache=True)
-    #         return spline_function
-    #     else:
-    #         return default
-    #
-    # def assume_numeric(self, validate=False):
-    #     return sc.SortedNumericKeyValueSeries(
-    #         keys=self.key_series().assume_numeric(),
-    #         values=self.value_series().assume_numeric(),
-    #     )
