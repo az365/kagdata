@@ -13,10 +13,10 @@ class KeyValueSeries(sc.AnySeries):
             values=[],
             validate=True,
     ):
-        self.keys = keys.get_values() if isinstance(keys, sc.AnySeries) else list(keys)
+        self.keys = list(keys)
         super().__init__(
             values=values,
-            validate=validate
+            validate=validate,
         )
 
     def get_errors(self):
@@ -27,9 +27,9 @@ class KeyValueSeries(sc.AnySeries):
     def has_valid_counts(self):
         return len(self.get_keys()) == len(self.get_values())
 
-    @staticmethod
+    @classmethod
     def get_data_fields(cls):
-        return 'keys', 'values'
+        return ['keys', 'values']
 
     @classmethod
     def from_items(cls, items):
@@ -59,7 +59,7 @@ class KeyValueSeries(sc.AnySeries):
         return self.keys
 
     def set_keys(self, keys):
-        self.new(
+        return self.new(
             keys=keys,
             values=self.get_values(),
         )
@@ -112,7 +112,7 @@ class KeyValueSeries(sc.AnySeries):
             keys = key_value_series.get_keys() + self.get_keys()
             values = key_value_series.get_values() + self.get_values()
         else:
-            keys = self.get_values() + key_value_series.get_keys()
+            keys = self.get_keys() + key_value_series.get_keys()
             values = self.get_values() + key_value_series.get_values()
         return self.new(
             keys=keys,
@@ -167,9 +167,8 @@ class KeyValueSeries(sc.AnySeries):
     def sort_by_keys(self, reverse=False, inplace=False):
         if inplace:
             items = sorted(zip(self.get_keys(), self.get_values()), reverse=reverse)
-            for k, v in items:
-                self.get_keys().append(k)
-                self.get_values().append(v)
+            self.keys = [k for k, v in items]
+            self.values = [v for k, v in items]
         else:
             result = self.__class__.from_items(
                 sorted(self.get_items(), reverse=reverse),
