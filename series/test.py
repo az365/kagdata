@@ -40,7 +40,7 @@ def test_get_segment_for_date():
         [('2020-01-01', 10), ('2021-01-01', 20)],
         [('2021-01-01', 20), ('2022-01-01', 30)],
     ]
-    received = [sc.DateNumericSeries.from_dict(data).get_segment_for_date(d).get_list() for d in cases]
+    received = [sc.DateNumericSeries.from_dict(data).get_segment(d).get_list() for d in cases]
     assert received == expected
 
 
@@ -52,9 +52,30 @@ def test_get_interpolated_value():
     assert received == expected
 
 
+def test_interpolate():
+    data = ['2020-01-01', '2021-01-01', '2022-01-01'], [10, 130, 10], ['2021-04-01', '2021-07-01', '2021-10-01']
+    cases = (
+        {'how': 'linear'}, {'how': 'spline'},
+        {
+            'how': 'weighted',
+            'weight_benchmark': sc.DateNumericSeries.from_items(
+                [('2020-{:02}-01'.format(m), m) for m in range(1, 13)] + [('2021-01-01', 13)],
+            ),
+        },
+    )
+    expected = [[100, 70, 40], [100, 70, 40], [10, 7, 4]]
+    received = []
+    for c in cases:
+        series = sc.DateNumericSeries(*data[0:2])
+        interpolation = series.interpolate(data[2], **c)
+        received += [interpolation.map_values(int).get_values()]
+    assert expected == received
+
+
 if __name__ == '__main__':
     test_simple_smooth()
     test_get_nearest_date()
     test_get_distance_for_nearest_date()
     test_get_segment_for_date()
     test_get_interpolated_value()
+    test_interpolate()

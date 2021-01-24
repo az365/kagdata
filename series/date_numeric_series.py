@@ -117,6 +117,20 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
             interpolation_method = self.__getattribute__(method_name)
             return interpolation_method(dates, *args, **kwargs)
 
+    def weighted_interpolation(self, dates, weight_benchmark, internal='linear'):
+        assert isinstance(weight_benchmark, sc.DateNumericSeries)
+        list_dates = dates.get_dates() if isinstance(dates, (sc.DateNumericSeries, sc.DateNumericSeries)) else dates
+        border_dates = self.get_mutual_border_dates(weight_benchmark)
+        result = self.new(save_meta=True)
+        for d in list_dates:
+            yearly_dates = dt.get_yearly_dates(d, *border_dates)
+            yearly_primary = self.interpolate(yearly_dates, how=internal)
+            yearly_benchmark = weight_benchmark.interpolate(yearly_dates, how=internal)
+            weight = yearly_benchmark.divide(yearly_primary).get_mean()
+            interpolated_value = self.get_interpolated_value(d, how=internal) * weight
+            result.append_pair(d, interpolated_value, inplace=True)
+        return result
+
     def interpolate_to_weeks(self, how='spline', *args, **kwargs):
         monday_dates = dt.get_weeks_range(self.get_first_date(), self.get_last_date())
         return self.interpolate(monday_dates, how=how, *args, **kwargs)
