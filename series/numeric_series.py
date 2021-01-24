@@ -16,7 +16,7 @@ WINDOW_NEIGHBORS = (-1, 0)
 class NumericSeries(sc.AnySeries):
     def __init__(
             self,
-            values=list(),
+            values=[],
             validate=False,
     ):
         super().__init__(
@@ -26,7 +26,7 @@ class NumericSeries(sc.AnySeries):
 
     @staticmethod
     def get_distance_func():
-        return lambda c, v: v - c
+        return nm.diff
 
     def get_errors(self):
         yield from super().get_errors()

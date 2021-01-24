@@ -13,6 +13,14 @@ def is_nonzero(value):
     return (value or 0) > 0 or (value or 0) < 0
 
 
+def diff(c, v, take_abs=False):
+    result = v - c
+    if take_abs:
+        return abs(result)
+    else:
+        return result
+
+
 def is_local_extremum(x_left, x_center, x_right, local_max=True, local_min=True):
     result = False
     if local_max:
