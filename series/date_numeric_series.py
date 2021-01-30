@@ -107,28 +107,24 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
         if requires_numeric_keys:
             interpolation_method = self.to_days().__getattribute__(method_name)
             numeric_keys = sc.DateSeries(dates, sort_items=True).to_days()
-            interpolated_series = interpolation_method(numeric_keys, *args, **kwargs)
-            return self.new(
-                keys=numeric_keys,
-                values=interpolated_series.get_values(),
-                save_meta=False,
-            )
+            return interpolation_method(numeric_keys, *args, **kwargs).to_dates()
         else:
             interpolation_method = self.__getattribute__(method_name)
             return interpolation_method(dates, *args, **kwargs)
 
     def weighted_interpolation(self, dates, weight_benchmark, internal='linear'):
-        assert isinstance(weight_benchmark, sc.DateNumericSeries)
+        assert isinstance(weight_benchmark, (DateNumericSeries, sc.DateNumericSeries))
         list_dates = dates.get_dates() if isinstance(dates, (sc.DateNumericSeries, sc.DateNumericSeries)) else dates
         border_dates = self.get_mutual_border_dates(weight_benchmark)
         result = self.new(save_meta=True)
         for d in list_dates:
             yearly_dates = dt.get_yearly_dates(d, *border_dates)
-            yearly_primary = self.interpolate(yearly_dates, how=internal)
-            yearly_benchmark = weight_benchmark.interpolate(yearly_dates, how=internal)
-            weight = yearly_benchmark.divide(yearly_primary).get_mean()
-            interpolated_value = self.get_interpolated_value(d, how=internal) * weight
-            result.append_pair(d, interpolated_value, inplace=True)
+            if yearly_dates:
+                yearly_primary = self.interpolate(yearly_dates, how=internal)
+                yearly_benchmark = weight_benchmark.interpolate(yearly_dates, how=internal)
+                weight = yearly_benchmark.divide(yearly_primary).get_mean()
+                interpolated_value = self.get_interpolated_value(d, how=internal) * weight
+                result.append_pair(d, interpolated_value, inplace=True)
         return result
 
     def interpolate_to_weeks(self, how='spline', *args, **kwargs):

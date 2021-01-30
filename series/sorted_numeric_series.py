@@ -1,10 +1,15 @@
 try:  # Assume we're a sub-module in a package.
     import series_classes as sc
-    from utils import numeric as nm
+    from utils import (
+        numeric as nm,
+        dates as dt,
+    )
 except ImportError:  # Apparently no higher-level package has been imported, fall back to a local import.
     from .. import series_classes as sc
-    from ..utils import numeric as nm
-
+    from ..utils import (
+        numeric as nm,
+        dates as dt,
+    )
 
 DEFAULT_NUMERIC = True
 DEFAULT_SORTED = True
@@ -13,7 +18,7 @@ DEFAULT_SORTED = True
 class SortedNumericSeries(sc.SortedSeries, sc.NumericSeries):
     def __init__(
             self,
-            values=list(),
+            values=[],
             validate=False,
     ):
         super().__init__(
@@ -32,6 +37,12 @@ class SortedNumericSeries(sc.SortedSeries, sc.NumericSeries):
             validate=False,
             **self.get_data()
         )
+
+    def to_dates(self, as_iso_date=False, from_scale='days'):
+        return self.map(
+            function=lambda d: dt.get_date_from_numeric(d, from_scale=from_scale),
+            sorting_changed=False,
+        ).assume_dates()
 
     def get_range_len(self):
         return self.get_distance_func()(

@@ -57,6 +57,12 @@ class SortedNumericKeyValueSeries(sc.SortedKeyValueSeries, sc.SortedNumericSerie
             **self.get_data()
         )
 
+    def to_dates(self, as_iso_date=False, from_scale='days'):
+        return self.map_keys(
+            function=lambda d: dt.get_date_from_numeric(d, from_scale=from_scale),
+            sorting_changed=False,
+        ).assume_dates()
+
     def get_range_len(self):
         return self.get_distance_func()(
             *self.key_series().get_borders()
