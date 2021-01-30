@@ -39,6 +39,15 @@ class SortedNumericKeyValueSeries(sc.SortedKeyValueSeries, sc.SortedNumericSerie
     def get_meta_fields(cls):
         return list(super().get_meta_fields()) + ['cached_spline']
 
+    def set_meta(self, dict_meta, inplace=False):
+        if inplace:
+            for k, v in dict_meta.items():
+                if hasattr(v, 'copy') and k != 'cached_spline':
+                    v = v.copy()
+                self.__dict__[k] = v
+        else:
+            return super().set_meta(dict_meta, inplace=inplace)
+
     def key_series(self):
         return sc.SortedNumericSeries(self.get_keys())
 
@@ -121,7 +130,7 @@ class SortedNumericKeyValueSeries(sc.SortedKeyValueSeries, sc.SortedNumericSerie
     def get_spline_interpolated_value(self, key, default=None):
         if self.has_key_in_range(key):
             spline_function = self.get_spline_function(from_cache=True, to_cache=True)
-            return spline_function(key)
+            return float(spline_function(key))
         else:
             return default
 
@@ -153,8 +162,11 @@ class SortedNumericKeyValueSeries(sc.SortedKeyValueSeries, sc.SortedNumericSerie
             result.append_pair(k, self.get_linear_interpolated_value(k, near_for_outside), inplace=True)
         return result
 
-    def spline_interpolation(self, keys, default=None):
-        result = self.new(save_meta=True)
-        for k in keys:
-            result.append_pair(k, self.get_spline_interpolated_value(k, default), inplace=True)
+    def spline_interpolation(self, keys):
+        spline_function = self.get_spline_function(from_cache=True, to_cache=True)
+        result = self.new(
+            keys=keys,
+            values=spline_function(list(keys)),
+            save_meta=True,
+        )
         return result
