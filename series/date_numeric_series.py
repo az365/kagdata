@@ -190,27 +190,27 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
             for_full_window_only=False,
         )
 
-    def math(self, series, function, use_spline=False):
-        assert isinstance(series, sc.DateNumericSeries)
+    def math(self, series, function, interpolation_kwargs={'how': 'linear'}):
+        assert isinstance(series, (DateNumericSeries, sc.DateNumericSeries))
         result = self.new(save_meta=True)
         for d, v in self.get_items():
             if v is not None:
-                v0 = series.get_interpolated_value(d, use_spline=use_spline)
+                v0 = series.get_interpolated_value(d, **interpolation_kwargs)
                 if v0 is not None:
                     result.append_pair(d, function(v, v0), inplace=True)
         return result
 
-    def yoy(self, use_spline=False):
+    def yoy(self, interpolation_kwargs={'how': 'linear', 'near_for_outside': False}):
         yearly_shifted = self.yearly_shift()
         return self.math(
             yearly_shifted,
             function=lambda a, b: (a - b) / b if b else None,
-            use_spline=use_spline,
+            interpolation_kwargs=interpolation_kwargs,
         )
 
-    def get_yoy_for_date(self, date, use_spline=False):
+    def get_yoy_for_date(self, date, interpolation_kwargs={'how': 'linear'}):
         if not self.cached_yoy:
-            self.cached_yoy = self.yoy(use_spline=use_spline)
+            self.cached_yoy = self.yoy(interpolation_kwargs=interpolation_kwargs)
         if date in self.cached_yoy:
             return self.get_value(date)
         elif date < self.get_first_date():
@@ -218,13 +218,17 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
         elif date > self.get_last_date():
             return self.last_year().get_mean()
         else:
-            return self.get_interpolated_value(date, use_spline=use_spline)
+            return self.get_interpolated_value(date, **interpolation_kwargs)
 
-    def extrapolate_by_yoy(self, dates, yoy, smooth_kwargs=None, use_spline=False):
+    def extrapolate_by_yoy(
+            self, dates,
+            yoy=None,
+            yoy_smooth_kwargs=None, interpolation_kwargs={'how': 'linear'},
+    ):
         if not yoy:
             yoy = self.yoy()
-        if smooth_kwargs is not None:
-            yoy = yoy.smooth(**smooth_kwargs)
+        if yoy_smooth_kwargs is not None:
+            yoy = yoy.smooth(**yoy_smooth_kwargs)
         result = self.new()
         for d in dates:
             if self.has_date_in_range(d):
@@ -236,7 +240,7 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
                     increment = int(dt.get_days_between(self.get_first_date(), d) / dt.DAYS_IN_YEAR) + 1
                 base_date = dt.get_next_year_date(d, increment=-increment)
                 base_value = self.get_interpolated_value(base_date)
-                cur_yoy = yoy.get_interpolated_value(d, use_spline=use_spline)
+                cur_yoy = yoy.get_interpolated_value(d, **interpolation_kwargs)
                 cur_value = base_value * (1 + cur_yoy) ** increment
             result.append_pair(d, cur_value, inplace=True)
         return result
