@@ -79,11 +79,11 @@ class DateSeries(sc.SortedSeries):
         )
 
     def get_first_date(self):
-        if self.get_count():
+        if self.has_items():
             return self.get_dates()[0]
 
     def get_last_date(self):
-        if self.get_count():
+        if self.has_items():
             return self.get_dates()[-1]
 
     def get_border_dates(self):
@@ -158,7 +158,7 @@ class DateSeries(sc.SortedSeries):
     def distance(self, d, take_abs=True):
         if isinstance(d, (str, dt.date)):
             distance_series = self.distance_for_date(d, take_abs=take_abs)
-        elif isinstance(d, sc.DateSeries):
+        elif isinstance(d, (DateSeries, sc.DateSeries)):
             date_series = self.new(d, validate=False, sort_items=False)
             distance_series = sc.DateNumericSeries(
                 self.get_dates(),

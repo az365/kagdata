@@ -15,11 +15,11 @@ DEFAULT_SORTED = False
 class AnySeries(AbstractSeries):
     def __init__(
             self,
-            values=list(),
+            values=[],
             validate=False,
     ):
         super().__init__(
-            values=values.get_list() if isinstance(values, AnySeries) else list(values),
+            values=list(values),
             validate=validate,
         )
 
@@ -51,6 +51,9 @@ class AnySeries(AbstractSeries):
 
     def set_items(self, items):
         return self.set_values(items)
+
+    def has_items(self):
+        return bool(self.get_values())
 
     def get_count(self):
         return len(self.get_values())
@@ -88,7 +91,9 @@ class AnySeries(AbstractSeries):
         return self.get_list()[n_start: n_end]
 
     def slice(self, n_start, n_end):
-        return self.new(save_meta=True).set_items(self.get_items_from_to(n_start, n_end))
+        return self.new(save_meta=True).set_items(
+            self.get_items_from_to(n_start, n_end),
+        )
 
     def crop(self, left_count, right_count):
         return self.slice(
