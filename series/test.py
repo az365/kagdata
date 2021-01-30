@@ -72,6 +72,20 @@ def test_interpolate():
     assert expected == received
 
 
+def test_find_base_date():
+    data = ['2019-01-01', '2019-06-01', '2020-01-01', '2021-01-01'], [1, 1, 1, 1]
+    cases = [
+        '2017-02-01', '2018-02-01', '2018-02-01', '2019-02-01',
+        '2019-05-15', '2020-02-01', '2021-02-01', '2022-02-01',
+    ]
+    expected = [
+        ('2019-02-01', -2), ('2019-02-01', -1), ('2019-02-01', -1), ('2019-02-01', 0),
+        ('2019-05-15', 0), ('2020-02-01', 0), ('2020-02-01', 1), ('2020-02-01', 2),
+    ]
+    received = [sc.DateNumericSeries(*data).find_base_date(d, 31, True) for d in cases]
+    assert received == expected
+
+
 if __name__ == '__main__':
     test_simple_smooth()
     test_get_nearest_date()
@@ -79,3 +93,4 @@ if __name__ == '__main__':
     test_get_segment_for_date()
     test_get_interpolated_value()
     test_interpolate()
+    test_find_base_date()

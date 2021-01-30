@@ -71,6 +71,12 @@ class DateSeries(sc.SortedSeries):
     def to_days(self):
         return self.map_dates(dt.get_day_abs_from_date).assume_numeric()
 
+    def to_weeks(self):
+        return self.map_dates(dt.get_week_abs_from_date).assume_numeric()
+
+    def to_years(self):
+        return self.map_dates(lambda d: dt.get_year_from_date(d, decimal=True)).assume_numeric()
+
     def date_series(self):
         return DateSeries(
             self.get_dates(),
@@ -202,3 +208,24 @@ class DateSeries(sc.SortedSeries):
     def interpolate_to_weeks(self):
         monday_dates = dt.get_weeks_range(self.get_first_date(), self.get_last_date())
         return self.new(monday_dates)
+
+    def find_base_date(self, date, max_distance=dt.MAX_DAYS_IN_MONTH, return_increment=False):
+        candidates = sc.DateSeries(
+            dt.get_yearly_dates(date, self.get_first_date(), self.get_last_date()),
+        )
+        if not candidates.has_items():
+            return None
+        distance_for_base_date = candidates.distance(self.date_series())
+        filtered_distances_for_base_date = distance_for_base_date.filter_values(lambda d: abs(d) <= max_distance)
+        if filtered_distances_for_base_date.has_items():
+            distance_for_cur_date = filtered_distances_for_base_date.distance(date, take_abs=True)
+        else:
+            distance_for_cur_date = distance_for_base_date.distance(date, take_abs=True)
+        base_date = distance_for_cur_date.get_arg_min()
+        if return_increment:
+            increment = self.get_distance_func()(base_date, date, take_abs=False) / dt.DAYS_IN_YEAR
+            increment = round(increment)
+            increment = int(increment)
+            return base_date, increment
+        else:
+            return base_date

@@ -222,7 +222,7 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
 
     def extrapolate_by_yoy(
             self, dates,
-            yoy=None,
+            yoy=None, max_distance=dt.MAX_DAYS_IN_MONTH,
             yoy_smooth_kwargs=None, interpolation_kwargs={'how': 'linear'},
     ):
         if not yoy:
@@ -231,17 +231,20 @@ class DateNumericSeries(sc.SortedNumericKeyValueSeries, sc.DateSeries):
             yoy = yoy.smooth(**yoy_smooth_kwargs)
         result = self.new()
         for d in dates:
-            if self.has_date_in_range(d):
-                cur_value = self.get_interpolated_value(d, use_spline=use_spline)
+            base_date, increment = self.find_base_date(d, max_distance=max_distance, return_increment=True)
+            if not increment:
+                cur_value = self.get_interpolated_value(d, **interpolation_kwargs)
             else:
-                if d > self.get_last_date():
-                    increment = int(dt.get_days_between(self.get_last_date(), d) / dt.DAYS_IN_YEAR) + 1
-                else:
-                    increment = int(dt.get_days_between(self.get_first_date(), d) / dt.DAYS_IN_YEAR) + 1
-                base_date = dt.get_next_year_date(d, increment=-increment)
+                yoy_date = yoy.find_base_date(d, max_distance=max_distance, return_increment=False)
+                if yoy_date:
+                    cur_yoy = yoy.get_interpolated_value(yoy_date, **interpolation_kwargs)
+                elif increment > 0:
+                    cur_yoy = yoy.last_year().value_series().get_mean()
+                else:  # increment < 0
+                    cur_yoy = yoy.first_year().value_series().get_mean()
                 base_value = self.get_interpolated_value(base_date)
-                cur_yoy = yoy.get_interpolated_value(d, **interpolation_kwargs)
-                cur_value = base_value * (1 + cur_yoy) ** increment
+                coefficient = (1 + cur_yoy) ** increment
+                cur_value = base_value * coefficient
             result.append_pair(d, cur_value, inplace=True)
         return result
 
